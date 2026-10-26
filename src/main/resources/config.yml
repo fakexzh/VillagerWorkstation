@@ -1,20 +1,28 @@
-# Job checks are scheduled only while the plugin/server is running.
-# Unloaded chunks are never force-loaded by this plugin.
+# Shared worker scheduler. 20 ticks is approximately one second at full TPS.
 scan-interval-ticks: 40
 work-radius: 8
 chest-radius: 8
 max-crops-per-cycle: 2
+max-items-per-cycle: 8
+
+# Farmer job: harvest and replant fully grown wheat, carrots, potatoes and beetroot.
 farmer-enabled: true
 
-# Future profession jobs will be configurable independently.
-jobs:
-  farmer:
-    enabled: true
-    workstation: COMPOSTER
-    profession: FARMER
-    crops:
-      - WHEAT
-      - CARROTS
-      - POTATOES
-      - BEETROOTS
-    storage: COPPER_CHEST_ONLY
+# Other professions collect matching, already-dropped items near their workstation.
+# This never breaks blocks or harms entities; only items that fit are collected.
+profession-drop-collection-enabled: true
+
+# Supported workstation-to-profession mapping:
+# COMPOSTER -> FARMER
+# BARREL -> FISHERMAN
+# LOOM -> SHEPHERD
+# FLETCHING_TABLE -> FLETCHER
+# LECTERN -> LIBRARIAN
+# CARTOGRAPHY_TABLE -> CARTOGRAPHER
+# BREWING_STAND -> CLERIC
+# BLAST_FURNACE -> ARMORER
+# SMOKER -> BUTCHER
+# CAULDRON -> LEATHERWORKER
+# STONECUTTER -> MASON
+# SMITHING_TABLE -> TOOLSMITH
+# GRINDSTONE -> WEAPONSMITH
