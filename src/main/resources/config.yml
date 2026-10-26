@@ -7,8 +7,12 @@ work-radius: 64
 chest-radius: 8
 
 # Farmers harvest mature wheat, carrots, potatoes and beetroot, replant them,
-# and store every harvest drop directly in the copper chest.
+# and store every harvest drop directly in the copper chest. Main crop items are
+# limited to 64 of each type per workstation per rolling real-world hour.
 farmer-enabled: true
+farmer-max-items-per-crop-per-hour: 64
 
-# Fishermen simulate one fish catch per work cycle when water is nearby.
+# Fishermen store a mixed catch of at most 64 fish per workstation per rolling real-world hour.
+# Catch odds: cod 60%, salmon 30%, tropical fish 6%, pufferfish 4%.
 fisherman-fishing-enabled: true
+fisherman-max-fish-per-hour: 64
