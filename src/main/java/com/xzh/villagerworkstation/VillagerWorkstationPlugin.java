@@ -67,7 +67,7 @@ public final class VillagerWorkstationPlugin extends JavaPlugin implements Liste
      * limits the work done per station, and assigns a villager at most once per cycle.
      */
     private void runWorkCycle() {
-        if (!getConfig().getBoolean("farmer-enabled", true) || workstations.isEmpty()) return;
+        if (workstations.isEmpty()) return;
 
         int workRadius = Math.max(1, Math.min(16, getConfig().getInt("work-radius", 8)));
         int chestRadius = Math.max(1, Math.min(16, getConfig().getInt("chest-radius", 8)));
@@ -103,9 +103,12 @@ public final class VillagerWorkstationPlugin extends JavaPlugin implements Liste
             Inventory inventory = container.getInventory();
 
             if (stationProfession != Villager.Profession.FARMER) {
-                collectProfessionDrops(world, stationBlock.getLocation(), inventory, stationProfession, workRadius);
+                if (getConfig().getBoolean("profession-drop-collection-enabled", true)) {
+                    collectProfessionDrops(world, stationBlock.getLocation(), inventory, stationProfession, workRadius);
+                }
                 continue;
             }
+            if (!getConfig().getBoolean("farmer-enabled", true)) continue;
 
             int harvested = 0;
             int minX = stationBlock.getX() - workRadius;
