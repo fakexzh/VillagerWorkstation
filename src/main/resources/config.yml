@@ -1,6 +1,8 @@
 # Shared worker scheduler. 20 ticks is approximately one second at full TPS.
 scan-interval-ticks: 40
 work-radius: 8
+# During daytime, matching villagers within this range are guided back to their station.
+return-to-work-radius: 32
 chest-radius: 8
 
 # Farmer harvests every mature supported crop in its scan area and replants it.
