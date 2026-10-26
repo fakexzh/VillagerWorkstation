@@ -11,6 +11,7 @@ import org.bukkit.block.data.Ageable;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.Mob;
 import org.bukkit.entity.Villager;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -105,14 +106,14 @@ public final class VillagerWorkstationPlugin extends JavaPlugin implements Liste
 
     /**
      * All world access happens on the server thread. The job loop never force-loads chunks,
-     * limits the work done per station, and assigns a villager at most once per cycle.
+     * assigns a villager at most once per cycle and recalls workers to their station during daytime.
      */
     private void runWorkCycle() {
         if (workstations.isEmpty()) return;
 
         int workRadius = Math.max(1, Math.min(16, getConfig().getInt("work-radius", 8)));
         int chestRadius = Math.max(1, Math.min(16, getConfig().getInt("chest-radius", 8)));
-        Set<UUID> assignedFarmers = new HashSet<>();
+        Set<UUID> assignedVillagers = new HashSet<>();
 
         for (Workstation workstation : List.copyOf(workstations.values())) {
             World world = Bukkit.getWorld(workstation.worldId());
@@ -122,21 +123,33 @@ public final class VillagerWorkstationPlugin extends JavaPlugin implements Liste
             Villager.Profession stationProfession = professionForStation(stationBlock.getType());
             if (stationProfession == null) continue;
 
+            // Keep the vanilla night/sleep routine, but actively recall matching workers during daytime.
+            long time = world.getTime();
+            boolean night = time >= 12542L && time < 23460L;
+            if (night) continue;
+
+            int returnRadius = Math.max(workRadius, Math.min(64, getConfig().getInt("return-to-work-radius", 32)));
             Collection<Entity> nearbyEntities = world.getNearbyEntities(
                     stationBlock.getLocation().add(0.5, 0.5, 0.5),
-                    workRadius, workRadius, workRadius,
+                    returnRadius, returnRadius, returnRadius,
                     entity -> entity instanceof Villager villager
                             && !villager.isDead()
                             && villager.getProfession() == stationProfession
-                            && !assignedFarmers.contains(villager.getUniqueId())
+                            && !assignedVillagers.contains(villager.getUniqueId())
             );
 
-            Villager farmer = nearbyEntities.stream()
+            Villager worker = nearbyEntities.stream()
                     .map(Villager.class::cast)
                     .min(Comparator.comparingDouble(v -> v.getLocation().distanceSquared(stationBlock.getLocation())))
                     .orElse(null);
-            if (farmer == null) continue;
-            assignedFarmers.add(farmer.getUniqueId());
+            if (worker == null) continue;
+            assignedVillagers.add(worker.getUniqueId());
+
+            Location stationCenter = stationBlock.getLocation().add(0.5, 0.0, 0.5);
+            if (worker.getLocation().distanceSquared(stationCenter) > 9.0) {
+                worker.getPathfinder().moveTo(stationCenter, 1.0);
+                continue;
+            }
 
             Block chestBlock = findCopperChest(workstation, world, stationBlock.getLocation(), chestRadius);
             if (chestBlock == null || !(chestBlock.getState() instanceof Container container)) continue;
