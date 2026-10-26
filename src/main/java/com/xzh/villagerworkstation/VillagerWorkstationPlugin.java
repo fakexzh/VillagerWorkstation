@@ -16,6 +16,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.entity.EntitySpawnEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -44,6 +45,8 @@ public final class VillagerWorkstationPlugin extends JavaPlugin implements Liste
         loadWorkstations();
         Bukkit.getPluginManager().registerEvents(this, this);
         startWorkerTask();
+        updateLoadedVillagerNames();
+        Bukkit.getScheduler().runTaskTimer(this, this::updateLoadedVillagerNames, 100L, 100L);
         getLogger().info("Enabled with " + workstations.size() + " registered workstation(s).");
     }
 
@@ -54,6 +57,43 @@ public final class VillagerWorkstationPlugin extends JavaPlugin implements Liste
             workerTask = null;
         }
         saveWorkstations();
+    }
+
+    /**
+     * Keep profession labels visible above every loaded villager. This intentionally uses
+     * profession names as requested, replacing any existing custom name on villagers.
+     */
+    private void updateLoadedVillagerNames() {
+        if (!getConfig().getBoolean("profession-names.enabled", true)) return;
+        for (World world : Bukkit.getWorlds()) {
+            for (Entity entity : world.getEntities()) {
+                if (entity instanceof Villager villager && !villager.isDead()) {
+                    applyProfessionName(villager);
+                }
+            }
+        }
+    }
+
+    private void applyProfessionName(Villager villager) {
+        if (!getConfig().getBoolean("profession-names.enabled", true)) return;
+        String name = stationProfessionName(villager.getProfession());
+        if (!name.isEmpty()) {
+            name = java.util.Arrays.stream(name.split(" "))
+                    .filter(part -> !part.isEmpty())
+                    .map(part -> part.substring(0, 1).toUpperCase(java.util.Locale.ROOT) + part.substring(1))
+                    .collect(java.util.stream.Collectors.joining(" "));
+        }
+        if (!name.equals(villager.getCustomName()) || !villager.isCustomNameVisible()) {
+            villager.setCustomName(name);
+            villager.setCustomNameVisible(true);
+        }
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onVillagerSpawn(EntitySpawnEvent event) {
+        if (event.getEntity() instanceof Villager villager) {
+            applyProfessionName(villager);
+        }
     }
 
     private void startWorkerTask() {
