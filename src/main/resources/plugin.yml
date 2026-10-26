@@ -1,15 +1,18 @@
 name: VillagerWorkstation
-version: 0.4.2
+version: 0.4.3
 main: com.xzh.villagerworkstation.VillagerWorkstationPlugin
 api-version: '26.3'
 author: XZH
 description: Custom farmer and fisherman jobs with copper-chest storage.
 commands:
+  work:
+    description: Register the workstation block you are looking at.
+    usage: /work
   vw:
     description: Manage VillagerWorkstation job stations.
     usage: /vw <set|remove|list|reload|help>
     permission: villagerworkstation.admin
 permissions:
   villagerworkstation.admin:
-    description: Register, remove, list, and reload villager workstations.
+    description: Register, remove, list, and reload workstations.
     default: op
