@@ -1,4 +1,4 @@
-# VillagerWorkstation 0.4.0
+# VillagerWorkstation 0.4.1
 
 A standalone Paper/Purpur plugin with workstation-linked villager jobs and always-visible profession labels above villagers' heads. Farmers harvest mature wheat, carrots, potatoes and beetroot throughout their scan area, replant them, and send remaining drops straight to a copper chest. Fishermen catch one fish per worker cycle when water is nearby. Other professions collect matching, already-dropped item stacks.
 
@@ -7,7 +7,7 @@ A standalone Paper/Purpur plugin with workstation-linked villager jobs and alway
 - Paper/Purpur API: `26.3.build.195-stable`
 - Java: 25
 - Build: `gradle clean test build`
-- Output JAR: `build/libs/VillagerWorkstation-0.4.0.jar`
+- Output JAR: `build/libs/VillagerWorkstation-0.4.1.jar`
 
 GitHub Actions builds the project independently and publishes the JAR as a workflow artifact.
 
@@ -15,9 +15,9 @@ GitHub Actions builds the project independently and publishes the JAR as a workf
 
 1. Place a copper chest within 8 blocks of the workstation.
 2. Place the correct workstation block and run `/vw set` while looking at it.
-3. Keep a villager with the matching profession within 8 blocks.
+3. Keep a villager with the matching profession within 32 blocks so it can be recalled to the station during daytime.
 4. For fisherman jobs, keep water within 8 horizontal blocks of the barrel; the water check allows 3 blocks above or below the barrel.
-5. Work only runs while the station chunk is loaded. The plugin never force-loads chunks.
+5. During daytime, matching villagers within `return-to-work-radius` are guided back to the station; jobs pause during the normal night/sleep window. After sunrise, the next scan recalls them. Work only runs while the station chunk is loaded; the plugin never force-loads chunks.
 6. Use `/vw list`, `/vw remove`, `/vw reload`, and `/vw help` as needed.
 
 ## Profession workstations
@@ -53,7 +53,8 @@ Permission: `villagerworkstation.admin` (default: OP).
 ## Configuration
 
 - `scan-interval-ticks`: scheduled scan interval (40 ticks ≈ 2 seconds at full TPS).
-- `work-radius`: villager and crop/item scan radius.
+- `work-radius`: crop/item scan radius and how close a villager must be to work.
+- `return-to-work-radius`: daytime search radius for guiding matching villagers back to their station (default: `32`).
 - `chest-radius`: copper-chest search radius.
 - `farmer-enabled`: enable or disable farmer crop work.
 - `fisherman-fishing-enabled`: enable or disable simulated fishing.
