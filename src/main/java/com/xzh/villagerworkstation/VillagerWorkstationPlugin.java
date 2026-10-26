@@ -235,22 +235,19 @@ public final class VillagerWorkstationPlugin extends JavaPlugin implements Liste
 
     private boolean matchesProfessionItem(Villager.Profession profession, Material material) {
         String n = material.name();
-        return switch (profession) {
-            case FISHERMAN -> n.contains("FISH") || n.equals("FISHING_ROD");
-            case SHEPHERD -> n.endsWith("_WOOL") || n.equals("SHEARS") || n.endsWith("_CARPET");
-            case FLETCHER -> n.equals("ARROW") || n.equals("SPECTRAL_ARROW") || n.equals("FEATHER") || n.equals("FLINT") || n.equals("BOW") || n.equals("CROSSBOW") || n.equals("STICK");
-            case LIBRARIAN -> n.contains("BOOK") || n.equals("PAPER") || n.equals("INK_SAC");
-            case CARTOGRAPHER -> n.equals("MAP") || n.equals("FILLED_MAP") || n.equals("PAPER") || n.equals("COMPASS") || n.equals("GLASS_PANE");
-            case CLERIC -> n.equals("ROTTEN_FLESH") || n.equals("GOLD_INGOT") || n.equals("GOLD_NUGGET") || n.equals("REDSTONE") || n.equals("GLOWSTONE_DUST") || n.equals("LAPIS_LAZULI") || n.equals("GLASS_BOTTLE") || n.contains("POTION");
-            case ARMORER -> n.contains("HELMET") || n.contains("CHESTPLATE") || n.contains("LEGGINGS") || n.contains("BOOTS") || n.contains("SHIELD") || n.equals("IRON_INGOT") || n.equals("IRON_NUGGET") || n.equals("CHAIN");
-            case BUTCHER -> n.contains("BEEF") || n.contains("PORKCHOP") || n.contains("CHICKEN") || n.contains("MUTTON") || n.contains("RABBIT") || n.contains("COD") || n.contains("SALMON");
-            case LEATHERWORKER -> n.equals("LEATHER") || n.startsWith("LEATHER_") || n.equals("RABBIT_HIDE") || n.equals("RABBIT_FOOT");
-            case MASON -> n.contains("STONE") || n.contains("BRICK") || n.contains("TERRACOTTA") || n.contains("QUARTZ") || n.equals("CLAY_BALL");
-            case TOOLSMITH -> n.contains("PICKAXE") || n.contains("SHOVEL") || n.contains("HOE") || n.equals("IRON_INGOT") || n.equals("IRON_NUGGET") || n.equals("DIAMOND");
-            case WEAPONSMITH -> n.contains("SWORD") || n.contains("AXE") || n.equals("IRON_INGOT") || n.equals("IRON_NUGGET") || n.equals("DIAMOND");
-            case FARMER -> false;
-            default -> false;
-        };
+        if (profession.equals(Villager.Profession.FISHERMAN)) return n.contains("FISH") || n.equals("FISHING_ROD");
+        if (profession.equals(Villager.Profession.SHEPHERD)) return n.endsWith("_WOOL") || n.equals("SHEARS") || n.endsWith("_CARPET");
+        if (profession.equals(Villager.Profession.FLETCHER)) return n.equals("ARROW") || n.equals("SPECTRAL_ARROW") || n.equals("FEATHER") || n.equals("FLINT") || n.equals("BOW") || n.equals("CROSSBOW") || n.equals("STICK");
+        if (profession.equals(Villager.Profession.LIBRARIAN)) return n.contains("BOOK") || n.equals("PAPER") || n.equals("INK_SAC");
+        if (profession.equals(Villager.Profession.CARTOGRAPHER)) return n.equals("MAP") || n.equals("FILLED_MAP") || n.equals("PAPER") || n.equals("COMPASS") || n.equals("GLASS_PANE");
+        if (profession.equals(Villager.Profession.CLERIC)) return n.equals("ROTTEN_FLESH") || n.equals("GOLD_INGOT") || n.equals("GOLD_NUGGET") || n.equals("REDSTONE") || n.equals("GLOWSTONE_DUST") || n.equals("LAPIS_LAZULI") || n.equals("GLASS_BOTTLE") || n.contains("POTION");
+        if (profession.equals(Villager.Profession.ARMORER)) return n.contains("HELMET") || n.contains("CHESTPLATE") || n.contains("LEGGINGS") || n.contains("BOOTS") || n.contains("SHIELD") || n.equals("IRON_INGOT") || n.equals("IRON_NUGGET") || n.equals("CHAIN");
+        if (profession.equals(Villager.Profession.BUTCHER)) return n.contains("BEEF") || n.contains("PORKCHOP") || n.contains("CHICKEN") || n.contains("MUTTON") || n.contains("RABBIT") || n.contains("COD") || n.contains("SALMON");
+        if (profession.equals(Villager.Profession.LEATHERWORKER)) return n.equals("LEATHER") || n.startsWith("LEATHER_") || n.equals("RABBIT_HIDE") || n.equals("RABBIT_FOOT");
+        if (profession.equals(Villager.Profession.MASON)) return n.contains("STONE") || n.contains("BRICK") || n.contains("TERRACOTTA") || n.contains("QUARTZ") || n.equals("CLAY_BALL");
+        if (profession.equals(Villager.Profession.TOOLSMITH)) return n.contains("PICKAXE") || n.contains("SHOVEL") || n.contains("HOE") || n.equals("IRON_INGOT") || n.equals("IRON_NUGGET") || n.equals("DIAMOND");
+        if (profession.equals(Villager.Profession.WEAPONSMITH)) return n.contains("SWORD") || n.contains("AXE") || n.equals("IRON_INGOT") || n.equals("IRON_NUGGET") || n.equals("DIAMOND");
+        return false;
     }
 
     private boolean isSupportedCrop(Block block) {
