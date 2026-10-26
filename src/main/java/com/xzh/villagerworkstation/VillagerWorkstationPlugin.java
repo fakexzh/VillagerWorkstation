@@ -75,9 +75,8 @@ public final class VillagerWorkstationPlugin extends JavaPlugin implements Liste
         updateProfessionLabels();
         if (workstations.isEmpty()) return;
 
-        int workRadius = Math.max(1, Math.min(16, getConfig().getInt("work-radius", 8)));
+        int workRadius = Math.max(1, Math.min(64, getConfig().getInt("work-radius", 64)));
         int chestRadius = Math.max(1, Math.min(16, getConfig().getInt("chest-radius", 8)));
-        Set<UUID> assignedVillagers = new HashSet<>();
 
         for (Workstation workstation : List.copyOf(workstations.values())) {
             World world = Bukkit.getWorld(workstation.worldId());
@@ -88,19 +87,17 @@ public final class VillagerWorkstationPlugin extends JavaPlugin implements Liste
             if (stationProfession != Villager.Profession.FARMER
                     && stationProfession != Villager.Profession.FISHERMAN) continue;
 
-            // Keep the vanilla night/sleep routine, but actively recall matching workers during daytime.
+            // Keep vanilla villager movement: production is simulated without pulling workers back.
             long time = world.getTime();
             boolean night = time >= 12542L && time < 23460L;
             if (night) continue;
 
-            int returnRadius = Math.max(workRadius, Math.min(64, getConfig().getInt("return-to-work-radius", 32)));
             Collection<Entity> nearbyEntities = world.getNearbyEntities(
                     stationBlock.getLocation().add(0.5, 0.5, 0.5),
-                    returnRadius, returnRadius, returnRadius,
+                    workRadius, 8, workRadius,
                     entity -> entity instanceof Villager villager
                             && !villager.isDead()
                             && villager.getProfession() == stationProfession
-                            && !assignedVillagers.contains(villager.getUniqueId())
             );
 
             Villager worker = nearbyEntities.stream()
@@ -109,15 +106,7 @@ public final class VillagerWorkstationPlugin extends JavaPlugin implements Liste
                     .orElse(null);
             if (worker == null) {
                 reportStatus(workstation, "No matching " + stationProfession.name().toLowerCase(java.util.Locale.ROOT)
-                        + " villager within " + returnRadius + " blocks.");
-                continue;
-            }
-            assignedVillagers.add(worker.getUniqueId());
-
-            Location stationCenter = stationBlock.getLocation().add(0.5, 1.0, 0.5);
-            if (worker.getLocation().distanceSquared(stationCenter) > 9.0) {
-                reportStatus(workstation, "Guiding matching villager back to the workstation.");
-                worker.getPathfinder().moveTo(stationCenter, 1.0);
+                        + " villager within the " + workRadius + " block work area.");
                 continue;
             }
 
@@ -212,6 +201,7 @@ public final class VillagerWorkstationPlugin extends JavaPlugin implements Liste
      */
     private void updateProfessionLabels() {
         NamespacedKey labelKey = new NamespacedKey(this, "profession-label");
+        double visibleDistanceSquared = 16.0 * 16.0;
         for (World world : Bukkit.getWorlds()) {
             for (Villager villager : world.getEntitiesByClass(Villager.class)) {
                 boolean managedLabel = villager.getPersistentDataContainer()
@@ -220,22 +210,22 @@ public final class VillagerWorkstationPlugin extends JavaPlugin implements Liste
                 boolean hasProfession = profession != Villager.Profession.NONE
                         && profession != Villager.Profession.NITWIT;
 
-                if (!hasProfession) {
-                    if (managedLabel) {
-                        villager.setCustomName(null);
-                        villager.setCustomNameVisible(false);
-                        villager.getPersistentDataContainer().remove(labelKey);
-                    }
-                    continue;
-                }
-
-                if (managedLabel || villager.getCustomName() == null) {
+                if (!hasProfession && managedLabel) {
+                    villager.setCustomName(null);
+                    villager.getPersistentDataContainer().remove(labelKey);
+                } else if (hasProfession && (managedLabel || villager.getCustomName() == null)) {
                     String label = profession.name().toLowerCase(java.util.Locale.ROOT);
                     label = Character.toUpperCase(label.charAt(0)) + label.substring(1);
                     villager.setCustomName(label);
-                    villager.setCustomNameVisible(true);
                     villager.getPersistentDataContainer().set(labelKey, PersistentDataType.BYTE, (byte) 1);
                 }
+
+                boolean playerNearby = Bukkit.getOnlinePlayers().stream()
+                        .filter(player -> player.getWorld().equals(world))
+                        .anyMatch(player -> player.getLocation().distanceSquared(villager.getLocation())
+                                <= visibleDistanceSquared);
+                // Preserve player-given names; only control whether an existing name is visible.
+                villager.setCustomNameVisible(villager.getCustomName() != null && playerNearby);
             }
         }
     }
@@ -412,13 +402,16 @@ public final class VillagerWorkstationPlugin extends JavaPlugin implements Liste
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!sender.hasPermission("villagerworkstation.admin")) {
+        boolean quickWorkCommand = command.getName().equalsIgnoreCase("work");
+        if (!quickWorkCommand && !sender.hasPermission("villagerworkstation.admin")) {
             sender.sendMessage(color("&cYou don't have permission to manage workstations."));
             return true;
         }
 
+        if (quickWorkCommand) args = new String[]{"set"};
         if (args.length == 0 || args[0].equalsIgnoreCase("help")) {
             sender.sendMessage(color("&6VillagerWorkstation &7- commands"));
+            sender.sendMessage(color("&e/work &7- Look at a composter or barrel to register a job."));
             sender.sendMessage(color("&e/vw set &7- Register a farmer composter or fisherman barrel."));
             sender.sendMessage(color("&e/vw remove &7- Unregister the block you're looking at."));
             sender.sendMessage(color("&e/vw list &7- List registered workstations."));
@@ -427,7 +420,7 @@ public final class VillagerWorkstationPlugin extends JavaPlugin implements Liste
         }
 
         if (!(sender instanceof org.bukkit.entity.Player player)) {
-            sender.sendMessage("This command must be run by a player.");
+            sender.sendMessage(color("&cThis command must be run by a player."));
             return true;
         }
 
@@ -456,17 +449,34 @@ public final class VillagerWorkstationPlugin extends JavaPlugin implements Liste
         Block target = player.getTargetBlockExact(6);
         if (args[0].equalsIgnoreCase("set")) {
             if (target == null || professionForStation(target.getType()) == null) {
-                player.sendMessage(color("&cLook at a farmer composter or fisherman barrel within 6 blocks."));
+                player.sendMessage(color("&cLook at a composter (farmer) or barrel (fisherman) within 6 blocks."));
                 return true;
             }
             Location location = target.getLocation();
             Workstation workstation = new Workstation(location.getWorld().getUID(),
                     location.getBlockX(), location.getBlockY(), location.getBlockZ());
+            if (workstations.containsKey(workstation.key())) {
+                player.sendMessage(color("&eThat workstation is already registered."));
+                player.sendMessage(color("&bKeep a matching villager within " + getConfig().getInt("work-radius", 64)
+                        + " blocks and place a copper chest within " + getConfig().getInt("chest-radius", 8) + " blocks."));
+                return true;
+            }
             workstations.put(workstation.key(), workstation);
+            chestCache.remove(workstation.key());
+            workstationStatuses.remove(workstation.key());
             saveWorkstations();
-            player.sendMessage(color("&a" + professionForStation(target.getType()).name().toLowerCase(java.util.Locale.ROOT)
-                    + " workstation registered. Place a copper chest within "
-                    + getConfig().getInt("chest-radius", 8) + " blocks and bring the matching villager nearby."));
+            if (target.getType() == Material.COMPOSTER) {
+                player.sendMessage(color("&a&lFarmer job registered!"));
+                player.sendMessage(color("&b1. Keep a farmer villager within " + getConfig().getInt("work-radius", 64) + " blocks."));
+                player.sendMessage(color("&b2. Place a copper chest within " + getConfig().getInt("chest-radius", 8) + " blocks of the composter."));
+                player.sendMessage(color("&7Mature wheat, carrots, potatoes and beetroot will be harvested and stored automatically."));
+            } else {
+                player.sendMessage(color("&a&lFisherman job registered!"));
+                player.sendMessage(color("&b1. Keep a fisherman villager within " + getConfig().getInt("work-radius", 64) + " blocks."));
+                player.sendMessage(color("&b2. Place a copper chest within " + getConfig().getInt("chest-radius", 8) + " blocks of the barrel."));
+                player.sendMessage(color("&b3. Keep water within the " + getConfig().getInt("work-radius", 64) + " block work area."));
+                player.sendMessage(color("&7Fish will be added automatically while the workstation is loaded and it is daytime."));
+            }
             return true;
         }
 
@@ -482,7 +492,7 @@ public final class VillagerWorkstationPlugin extends JavaPlugin implements Liste
                 chestCache.remove(workstation.key());
                 workstationStatuses.remove(workstation.key());
                 saveWorkstations();
-                player.sendMessage(color("&aVillager workstation removed."));
+                player.sendMessage(color("&aWorkstation registration removed. Place it again and run &e/work &ato register a new job."));
             } else {
                 player.sendMessage(color("&cThat block is not a registered workstation."));
             }
