@@ -3,7 +3,7 @@ plugins {
 }
 
 group = "com.xzh"
-version = "0.4.2"
+version = "0.4.3"
 
 repositories {
     maven("https://repo.papermc.io/repository/maven-public/")
