@@ -144,7 +144,7 @@ public final class VillagerWorkstationPlugin extends JavaPlugin implements Liste
             if (worker == null) continue;
             assignedVillagers.add(worker.getUniqueId());
 
-            Location stationCenter = stationBlock.getLocation().add(0.5, 0.0, 0.5);
+            Location stationCenter = stationBlock.getLocation().add(0.5, 1.0, 0.5);
             if (worker.getLocation().distanceSquared(stationCenter) > 9.0) {
                 worker.getPathfinder().moveTo(stationCenter, 1.0);
                 continue;
