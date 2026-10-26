@@ -33,6 +33,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 
 public final class VillagerWorkstationPlugin extends JavaPlugin implements Listener {
     private final Map<String, Workstation> workstations = new HashMap<>();
@@ -111,7 +112,6 @@ public final class VillagerWorkstationPlugin extends JavaPlugin implements Liste
 
         int workRadius = Math.max(1, Math.min(16, getConfig().getInt("work-radius", 8)));
         int chestRadius = Math.max(1, Math.min(16, getConfig().getInt("chest-radius", 8)));
-        int maxCrops = Math.max(1, Math.min(16, getConfig().getInt("max-crops-per-cycle", 2)));
         Set<UUID> assignedFarmers = new HashSet<>();
 
         for (Workstation workstation : List.copyOf(workstations.values())) {
@@ -143,6 +143,11 @@ public final class VillagerWorkstationPlugin extends JavaPlugin implements Liste
             Inventory inventory = container.getInventory();
 
             if (stationProfession != Villager.Profession.FARMER) {
+                if (stationProfession == Villager.Profession.FISHERMAN
+                        && getConfig().getBoolean("fisherman-fishing-enabled", true)
+                        && hasWaterNearby(world, stationBlock.getLocation(), workRadius)) {
+                    catchOneFish(inventory);
+                }
                 if (getConfig().getBoolean("profession-drop-collection-enabled", true)) {
                     collectProfessionDrops(world, stationBlock.getLocation(), inventory, stationProfession, workRadius);
                 }
@@ -158,9 +163,9 @@ public final class VillagerWorkstationPlugin extends JavaPlugin implements Liste
             int minZ = stationBlock.getZ() - workRadius;
             int maxZ = stationBlock.getZ() + workRadius;
 
-            for (int x = minX; x <= maxX && harvested < maxCrops; x++) {
-                for (int y = minY; y <= maxY && harvested < maxCrops; y++) {
-                    for (int z = minZ; z <= maxZ && harvested < maxCrops; z++) {
+            for (int x = minX; x <= maxX; x++) {
+                for (int y = minY; y <= maxY; y++) {
+                    for (int z = minZ; z <= maxZ; z++) {
                         if (!world.isChunkLoaded(x >> 4, z >> 4)) continue;
 
                         Block crop = world.getBlockAt(x, y, z);
@@ -202,32 +207,59 @@ public final class VillagerWorkstationPlugin extends JavaPlugin implements Liste
     }
 
     private Block findCopperChest(Workstation workstation, World world, Location center, int radius) {
-        // Cache the selected chest so every work cycle doesn't rescan thousands of blocks.
         ChestLocation cached = chestCache.get(workstation.key());
         if (cached != null && cached.worldId().equals(world.getUID())
                 && world.isChunkLoaded(cached.x() >> 4, cached.z() >> 4)) {
             Block cachedBlock = world.getBlockAt(cached.x(), cached.y(), cached.z());
             if (cachedBlock.getType().name().endsWith("COPPER_CHEST")
-                    && cachedBlock.getState() instanceof Container) {
-                return cachedBlock;
-            }
+                    && cachedBlock.getState() instanceof Container
+                    && Math.abs(cached.x() - center.getBlockX()) <= radius
+                    && Math.abs(cached.y() - center.getBlockY()) <= radius
+                    && Math.abs(cached.z() - center.getBlockZ()) <= radius) return cachedBlock;
             chestCache.remove(workstation.key());
         }
-
+        Block nearest = null;
+        double nearestDistance = Double.MAX_VALUE;
         for (int x = center.getBlockX() - radius; x <= center.getBlockX() + radius; x++) {
             for (int y = center.getBlockY() - radius; y <= center.getBlockY() + radius; y++) {
                 for (int z = center.getBlockZ() - radius; z <= center.getBlockZ() + radius; z++) {
                     if (!world.isChunkLoaded(x >> 4, z >> 4)) continue;
                     Block block = world.getBlockAt(x, y, z);
-                    if (!block.getType().name().endsWith("COPPER_CHEST")) continue;
-                    if (!(block.getState() instanceof Container)) continue;
-                    chestCache.put(workstation.key(),
-                            new ChestLocation(world.getUID(), block.getX(), block.getY(), block.getZ()));
-                    return block;
+                    if (!block.getType().name().endsWith("COPPER_CHEST")
+                            || !(block.getState() instanceof Container)) continue;
+                    double distance = block.getLocation().distanceSquared(center);
+                    if (distance < nearestDistance) {
+                        nearest = block;
+                        nearestDistance = distance;
+                    }
                 }
             }
         }
-        return null;
+        if (nearest != null) chestCache.put(workstation.key(),
+                new ChestLocation(world.getUID(), nearest.getX(), nearest.getY(), nearest.getZ()));
+        return nearest;
+    }
+
+    private boolean hasWaterNearby(World world, Location center, int radius) {
+        for (int x = center.getBlockX() - radius; x <= center.getBlockX() + radius; x++) {
+            for (int z = center.getBlockZ() - radius; z <= center.getBlockZ() + radius; z++) {
+                if (!world.isChunkLoaded(x >> 4, z >> 4)) continue;
+                for (int y = center.getBlockY() - 3; y <= center.getBlockY() + 3; y++) {
+                    if (world.getBlockAt(x, y, z).getType() == Material.WATER) return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private void catchOneFish(Inventory inventory) {
+        int roll = ThreadLocalRandom.current().nextInt(100);
+        Material fish = roll < 60 ? Material.COD
+                : roll < 85 ? Material.SALMON
+                : roll < 87 ? Material.TROPICAL_FISH
+                : Material.PUFFERFISH;
+        ItemStack catchItem = new ItemStack(fish, 1);
+        if (canFit(inventory, List.of(catchItem))) inventory.addItem(catchItem);
     }
 
     private Villager.Profession professionForStation(Material material) {
