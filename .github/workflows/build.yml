@@ -27,6 +27,6 @@ jobs:
       - name: Upload plugin JAR
         uses: actions/upload-artifact@v4
         with:
-          name: VillagerWorkstation-0.4.1
-          path: build/libs/VillagerWorkstation-0.4.1.jar
+          name: VillagerWorkstation-0.4.2
+          path: build/libs/VillagerWorkstation-0.4.2.jar
           if-no-files-found: error
