@@ -1,9 +1,9 @@
 name: VillagerWorkstation
-version: 0.4.1
+version: 0.4.2
 main: com.xzh.villagerworkstation.VillagerWorkstationPlugin
 api-version: '26.3'
 author: XZH
-description: Profession-based villager jobs with copper-chest storage.
+description: Custom farmer and fisherman jobs with copper-chest storage.
 commands:
   vw:
     description: Manage VillagerWorkstation job stations.
