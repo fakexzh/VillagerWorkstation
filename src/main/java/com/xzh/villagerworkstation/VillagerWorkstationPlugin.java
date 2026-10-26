@@ -4,6 +4,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.Container;
@@ -19,6 +20,7 @@ import org.bukkit.event.block.BlockBreakEvent;
 import io.papermc.paper.event.entity.EntityCompostItemEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
 
@@ -70,6 +72,7 @@ public final class VillagerWorkstationPlugin extends JavaPlugin implements Liste
      * assigns a villager at most once per cycle and recalls workers to their station during daytime.
      */
     private void runWorkCycle() {
+        updateProfessionLabels();
         if (workstations.isEmpty()) return;
 
         int workRadius = Math.max(1, Math.min(16, getConfig().getInt("work-radius", 8)));
@@ -200,6 +203,40 @@ public final class VillagerWorkstationPlugin extends JavaPlugin implements Liste
             reportStatus(workstation, chestFull
                     ? "Copper chest has no room for all drops; remaining mature crops were left unharvested."
                     : "Farmer active; mature crops are harvested and all drops go directly into the copper chest.");
+        }
+    }
+
+    /**
+     * Show profession labels only for employed villagers. Unemployed villagers and nitwits
+     * are never assigned a label by this plugin. Existing custom names are preserved.
+     */
+    private void updateProfessionLabels() {
+        NamespacedKey labelKey = new NamespacedKey(this, "profession-label");
+        for (World world : Bukkit.getWorlds()) {
+            for (Villager villager : world.getEntitiesByClass(Villager.class)) {
+                boolean managedLabel = villager.getPersistentDataContainer()
+                        .has(labelKey, PersistentDataType.BYTE);
+                Villager.Profession profession = villager.getProfession();
+                boolean hasProfession = profession != Villager.Profession.NONE
+                        && profession != Villager.Profession.NITWIT;
+
+                if (!hasProfession) {
+                    if (managedLabel) {
+                        villager.setCustomName(null);
+                        villager.setCustomNameVisible(false);
+                        villager.getPersistentDataContainer().remove(labelKey);
+                    }
+                    continue;
+                }
+
+                if (managedLabel || villager.getCustomName() == null) {
+                    String label = profession.name().toLowerCase(java.util.Locale.ROOT);
+                    label = Character.toUpperCase(label.charAt(0)) + label.substring(1);
+                    villager.setCustomName(label);
+                    villager.setCustomNameVisible(true);
+                    villager.getPersistentDataContainer().set(labelKey, PersistentDataType.BYTE, (byte) 1);
+                }
+            }
         }
     }
 
