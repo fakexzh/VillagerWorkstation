@@ -1,0 +1,15 @@
+name: VillagerWorkstation
+version: 0.1.0
+main: com.xzh.villagerworkstation.VillagerWorkstationPlugin
+api-version: '26.3'
+author: XZH
+description: Profession-based villager jobs with copper-chest storage.
+commands:
+  vw:
+    description: Manage VillagerWorkstation job stations.
+    usage: /vw <set|remove|list|reload|help>
+    permission: villagerworkstation.admin
+permissions:
+  villagerworkstation.admin:
+    description: Register, remove, list, and reload villager workstations.
+    default: op
