@@ -1,13 +1,13 @@
-# VillagerWorkstation 0.2.0
+# VillagerWorkstation 0.3.0
 
-A standalone Paper/Purpur plugin with workstation-linked villager jobs. It supports all 13 standard villager professions. Farmer villagers harvest and replant mature crops; the other 12 professions collect matching, already-dropped item stacks near their workstation into a nearby copper chest. These collectors do not break blocks or harm entities.
+A standalone Paper/Purpur plugin with workstation-linked villager jobs and always-visible profession labels above villagers' heads. It supports all 13 standard villager professions. Farmer villagers harvest and replant mature crops; the other 12 professions collect matching, already-dropped item stacks near their workstation into a nearby copper chest. These collectors do not break blocks or harm entities.
 
 ## Target environment
 
 - Paper/Purpur API: `26.3.build.195-stable`
 - Java: 25
 - Build: `gradle clean test build`
-- Output JAR: `build/libs/VillagerWorkstation-0.2.0.jar`
+- Output JAR: `build/libs/VillagerWorkstation-0.3.0.jar`
 
 GitHub Actions builds the project independently and publishes the JAR as a workflow artifact.
 
@@ -58,6 +58,7 @@ Permission: `villagerworkstation.admin` (default: OP).
 - `max-items-per-cycle`: maximum item stacks collected per scan for non-farmer jobs.
 - `farmer-enabled`: enable or disable farmer crop work.
 - `profession-drop-collection-enabled`: enable or disable item collection for the other professions.
+- `profession-names.enabled`: show each loaded villager's profession above its head (default: `true`). Enabling this replaces existing villager custom names.
 
 ## Safety and performance
 
