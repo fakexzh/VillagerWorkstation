@@ -2,30 +2,16 @@
 scan-interval-ticks: 40
 work-radius: 8
 chest-radius: 8
-max-crops-per-cycle: 2
-max-items-per-cycle: 8
 
-# Farmer job: harvest and replant fully grown wheat, carrots, potatoes and beetroot.
+# Farmer harvests every mature supported crop in its scan area and replants it.
+# Harvest leftovers go directly into the copper chest, never into the composter.
 farmer-enabled: true
 
-# Other professions collect matching, already-dropped items near their workstation.
-# This never breaks blocks or harms entities; only items that fit are collected.
-profession-drop-collection-enabled: true
+# Fishermen catch one fish per worker cycle when water is within the work radius.
+fisherman-fishing-enabled: true
 
-# Supported workstation-to-profession mapping:
-# COMPOSTER -> FARMER
-# BARREL -> FISHERMAN
-# LOOM -> SHEPHERD
-# FLETCHING_TABLE -> FLETCHER
-# LECTERN -> LIBRARIAN
-# CARTOGRAPHY_TABLE -> CARTOGRAPHER
-# BREWING_STAND -> CLERIC
-# BLAST_FURNACE -> ARMORER
-# SMOKER -> BUTCHER
-# CAULDRON -> LEATHERWORKER
-# STONECUTTER -> MASON
-# SMITHING_TABLE -> TOOLSMITH
-# GRINDSTONE -> WEAPONSMITH
+# Other professions collect matching, already-dropped items near their workstation.
+profession-drop-collection-enabled: true
 
 # Show each loaded villager's current profession above its head.
 # This replaces existing custom names on villagers while enabled.
