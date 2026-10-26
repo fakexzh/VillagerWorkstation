@@ -26,3 +26,8 @@ profession-drop-collection-enabled: true
 # STONECUTTER -> MASON
 # SMITHING_TABLE -> TOOLSMITH
 # GRINDSTONE -> WEAPONSMITH
+
+# Show each loaded villager's current profession above its head.
+# This replaces existing custom names on villagers while enabled.
+profession-names:
+  enabled: true
