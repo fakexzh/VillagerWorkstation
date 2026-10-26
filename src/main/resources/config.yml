@@ -1,0 +1,20 @@
+# Job checks are scheduled only while the plugin/server is running.
+# Unloaded chunks are never force-loaded by this plugin.
+scan-interval-ticks: 40
+work-radius: 8
+chest-radius: 8
+max-crops-per-cycle: 2
+farmer-enabled: true
+
+# Future profession jobs will be configurable independently.
+jobs:
+  farmer:
+    enabled: true
+    workstation: COMPOSTER
+    profession: FARMER
+    crops:
+      - WHEAT
+      - CARROTS
+      - POTATOES
+      - BEETROOTS
+    storage: COPPER_CHEST_ONLY
