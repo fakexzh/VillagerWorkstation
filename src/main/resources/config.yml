@@ -1,9 +1,9 @@
 # Custom production is limited to farmer and fisherman workstations only.
 # All other villager professions remain vanilla and are not modified by this plugin.
 scan-interval-ticks: 40
-work-radius: 8
-# During daytime, matching farmer/fisherman villagers within this range are guided back to their station.
-return-to-work-radius: 32
+# Horizontal work area: 64 blocks in each direction from the workstation.
+work-radius: 64
+# Keep the copper chest close to its workstation.
 chest-radius: 8
 
 # Farmers harvest mature wheat, carrots, potatoes and beetroot, replant them,
