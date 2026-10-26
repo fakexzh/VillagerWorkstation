@@ -201,23 +201,38 @@ public final class VillagerWorkstationPlugin extends JavaPlugin implements Liste
      */
     private void updateProfessionLabels() {
         NamespacedKey labelKey = new NamespacedKey(this, "profession-label");
+        NamespacedKey labelTextKey = new NamespacedKey(this, "profession-label-text");
         double visibleDistanceSquared = 16.0 * 16.0;
         for (World world : Bukkit.getWorlds()) {
             for (Villager villager : world.getEntitiesByClass(Villager.class)) {
-                boolean managedLabel = villager.getPersistentDataContainer()
-                        .has(labelKey, PersistentDataType.BYTE);
+                var data = villager.getPersistentDataContainer();
+                boolean managedLabel = data.has(labelKey, PersistentDataType.BYTE);
+                String previousLabel = data.get(labelTextKey, PersistentDataType.STRING);
+
+                // If a player renamed a villager, stop managing that name and preserve it.
+                if (managedLabel && previousLabel != null
+                        && !previousLabel.equals(villager.getCustomName())) {
+                    data.remove(labelKey);
+                    data.remove(labelTextKey);
+                    managedLabel = false;
+                }
+
                 Villager.Profession profession = villager.getProfession();
                 boolean hasProfession = profession != Villager.Profession.NONE
                         && profession != Villager.Profession.NITWIT;
 
                 if (!hasProfession && managedLabel) {
-                    villager.setCustomName(null);
-                    villager.getPersistentDataContainer().remove(labelKey);
+                    if (previousLabel == null || previousLabel.equals(villager.getCustomName())) {
+                        villager.setCustomName(null);
+                    }
+                    data.remove(labelKey);
+                    data.remove(labelTextKey);
                 } else if (hasProfession && (managedLabel || villager.getCustomName() == null)) {
                     String label = profession.name().toLowerCase(java.util.Locale.ROOT);
                     label = Character.toUpperCase(label.charAt(0)) + label.substring(1);
                     villager.setCustomName(label);
-                    villager.getPersistentDataContainer().set(labelKey, PersistentDataType.BYTE, (byte) 1);
+                    data.set(labelKey, PersistentDataType.BYTE, (byte) 1);
+                    data.set(labelTextKey, PersistentDataType.STRING, label);
                 }
 
                 boolean playerNearby = Bukkit.getOnlinePlayers().stream()
