@@ -11,6 +11,7 @@ import org.bukkit.block.Container;
 import org.bukkit.block.data.Ageable;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Villager;
 import org.bukkit.event.EventHandler;
@@ -41,12 +42,19 @@ public final class VillagerWorkstationPlugin extends JavaPlugin implements Liste
     private final Map<String, Workstation> workstations = new HashMap<>();
     private final Map<String, ChestLocation> chestCache = new HashMap<>();
     private final Map<String, String> workstationStatuses = new HashMap<>();
+    private final Map<String, ProductionWindow> productionWindows = new HashMap<>();
+    private static final long PRODUCTION_WINDOW_MILLIS = 60L * 60L * 1000L;
+    private static final int MAX_FISH_PER_HOUR = 64;
+    private static final int MAX_ITEMS_PER_CROP_PER_HOUR = 64;
+    private File productionFile;
+    private YamlConfiguration productionData;
     private BukkitTask workerTask;
 
     @Override
     public void onEnable() {
         saveDefaultConfig();
         loadWorkstations();
+        loadProductionWindows();
         Bukkit.getPluginManager().registerEvents(this, this);
         startWorkerTask();
         getLogger().info("Enabled with " + workstations.size() + " registered farmer/fisherman workstation(s).");
@@ -59,6 +67,7 @@ public final class VillagerWorkstationPlugin extends JavaPlugin implements Liste
             workerTask = null;
         }
         saveWorkstations();
+        saveProductionWindows();
     }
 
     private void startWorkerTask() {
@@ -127,7 +136,12 @@ public final class VillagerWorkstationPlugin extends JavaPlugin implements Liste
                     reportStatus(workstation, "No water found within the fisherman's work radius.");
                     continue;
                 }
-                if (catchOneFish(inventory)) {
+                ProductionWindow production = productionWindow(workstation);
+                if (production.fishCount >= maxFishPerHour()) {
+                    reportStatus(workstation, "Fisherman reached the limit of 64 mixed fish per real-world hour.");
+                    continue;
+                }
+                if (catchOneFish(workstation, inventory)) {
                     reportStatus(workstation, "Fisherman active; catch stored directly in copper chest.");
                 } else {
                     reportStatus(workstation, "Copper chest has no room for a fish catch.");
@@ -161,6 +175,13 @@ public final class VillagerWorkstationPlugin extends JavaPlugin implements Liste
                         Material replantedCrop = cropForSeed(seed);
                         if (seed == null || replantedCrop == null) continue;
 
+                        Material cropOutput = cropOutputFor(crop.getType());
+                        if (cropOutput == null) continue;
+                        ProductionWindow production = productionWindow(workstation);
+                        int remainingCropItems = maxItemsPerCropPerHour()
+                                - production.cropCounts.getOrDefault(cropOutput, 0);
+                        if (remainingCropItems <= 0) continue;
+
                         List<ItemStack> drops = new ArrayList<>();
                         for (ItemStack drop : crop.getDrops()) {
                             if (drop != null && drop.getType() != Material.AIR && drop.getAmount() > 0) {
@@ -168,8 +189,14 @@ public final class VillagerWorkstationPlugin extends JavaPlugin implements Liste
                             }
                         }
 
-                        // Replanting is handled by this plugin, so keep every crop drop for storage.
-                        // Do not require a random wheat-seed drop before harvesting mature wheat.
+                        // Limit the main crop item to 64 per crop type per real-world hour.
+                        // If a randomized drop would exceed the remaining allowance, leave the crop
+                        // untouched and try it again later rather than discarding items or exceeding quota.
+                        int primaryCropAmount = drops.stream()
+                                .filter(drop -> drop.getType() == cropOutput)
+                                .mapToInt(ItemStack::getAmount).sum();
+                        if (primaryCropAmount <= 0 || primaryCropAmount > remainingCropItems) continue;
+
                         if (!canFit(inventory, drops)) {
                             chestFull = true;
                             continue;
@@ -186,6 +213,8 @@ public final class VillagerWorkstationPlugin extends JavaPlugin implements Liste
                                         world.dropItemNaturally(chestBlock.getLocation().add(0.5, 1.0, 0.5), item));
                             }
                         }
+                        production.cropCounts.merge(cropOutput, primaryCropAmount, Integer::sum);
+                        saveProductionWindows();
                     }
                 }
             }
@@ -291,15 +320,101 @@ public final class VillagerWorkstationPlugin extends JavaPlugin implements Liste
         return false;
     }
 
-    private boolean catchOneFish(Inventory inventory) {
+    private boolean catchOneFish(Workstation workstation, Inventory inventory) {
+        ProductionWindow production = productionWindow(workstation);
+        if (production.fishCount >= maxFishPerHour()) return false;
         int roll = ThreadLocalRandom.current().nextInt(100);
+        // Common fish dominate; tropical fish and pufferfish are intentionally rare.
         Material fish = roll < 60 ? Material.COD
-                : roll < 85 ? Material.SALMON
-                : roll < 87 ? Material.TROPICAL_FISH
+                : roll < 90 ? Material.SALMON
+                : roll < 96 ? Material.TROPICAL_FISH
                 : Material.PUFFERFISH;
         ItemStack catchItem = new ItemStack(fish, 1);
         if (!canFit(inventory, List.of(catchItem))) return false;
-        return inventory.addItem(catchItem).isEmpty();
+        if (!inventory.addItem(catchItem).isEmpty()) return false;
+        production.fishCount++;
+        saveProductionWindows();
+        return true;
+    }
+
+    private Material cropOutputFor(Material crop) {
+        return switch (crop) {
+            case WHEAT -> Material.WHEAT;
+            case CARROTS -> Material.CARROT;
+            case POTATOES -> Material.POTATO;
+            case BEETROOTS -> Material.BEETROOT;
+            default -> null;
+        };
+    }
+
+    private int maxFishPerHour() {
+        return Math.max(1, Math.min(MAX_FISH_PER_HOUR,
+                getConfig().getInt("fisherman-max-fish-per-hour", MAX_FISH_PER_HOUR)));
+    }
+
+    private int maxItemsPerCropPerHour() {
+        return Math.max(1, Math.min(MAX_ITEMS_PER_CROP_PER_HOUR,
+                getConfig().getInt("farmer-max-items-per-crop-per-hour", MAX_ITEMS_PER_CROP_PER_HOUR)));
+    }
+
+    private ProductionWindow productionWindow(Workstation workstation) {
+        long now = System.currentTimeMillis();
+        ProductionWindow window = productionWindows.get(workstation.key());
+        if (window == null || now < window.windowStart || now - window.windowStart >= PRODUCTION_WINDOW_MILLIS) {
+            window = new ProductionWindow(now);
+            productionWindows.put(workstation.key(), window);
+        }
+        return window;
+    }
+
+    private void loadProductionWindows() {
+        productionFile = new File(getDataFolder(), "production-limits.yml");
+        productionData = YamlConfiguration.loadConfiguration(productionFile);
+        productionWindows.clear();
+        long now = System.currentTimeMillis();
+        var section = productionData.getConfigurationSection("workstations");
+        if (section == null) return;
+        for (String key : section.getKeys(false)) {
+            var saved = section.getConfigurationSection(key);
+            if (saved == null) continue;
+            long start = saved.getLong("window-start", 0L);
+            if (start <= 0L || now < start || now - start >= PRODUCTION_WINDOW_MILLIS) continue;
+            ProductionWindow window = new ProductionWindow(start);
+            window.fishCount = Math.max(0, Math.min(maxFishPerHour(), saved.getInt("fish-count", 0)));
+            var crops = saved.getConfigurationSection("crop-counts");
+            if (crops != null) {
+                for (String name : crops.getKeys(false)) {
+                    try {
+                        Material material = Material.valueOf(name);
+                        if (material == Material.WHEAT || material == Material.CARROT
+                                || material == Material.POTATO || material == Material.BEETROOT) {
+                            window.cropCounts.put(material, Math.max(0, Math.min(maxItemsPerCropPerHour(), crops.getInt(name, 0))));
+                        }
+                    } catch (IllegalArgumentException ignored) { }
+                }
+            }
+            productionWindows.put(key, window);
+        }
+    }
+
+    private void saveProductionWindows() {
+        if (productionFile == null || productionData == null) return;
+        productionData.set("workstations", null);
+        for (Map.Entry<String, ProductionWindow> entry : productionWindows.entrySet()) {
+            String base = "workstations." + entry.getKey();
+            ProductionWindow window = entry.getValue();
+            productionData.set(base + ".window-start", window.windowStart);
+            productionData.set(base + ".fish-count", window.fishCount);
+            for (Map.Entry<Material, Integer> crop : window.cropCounts.entrySet()) {
+                productionData.set(base + ".crop-counts." + crop.getKey().name(), crop.getValue());
+            }
+        }
+        try {
+            if (!getDataFolder().exists()) getDataFolder().mkdirs();
+            productionData.save(productionFile);
+        } catch (IOException exception) {
+            getLogger().severe("Could not save production limits: " + exception.getMessage());
+        }
     }
 
     private Villager.Profession professionForStation(Material material) {
@@ -562,6 +677,13 @@ public final class VillagerWorkstationPlugin extends JavaPlugin implements Liste
 
     private String color(String text) {
         return ChatColor.translateAlternateColorCodes('&', text);
+    }
+
+    private static final class ProductionWindow {
+        private final long windowStart;
+        private int fishCount;
+        private final Map<Material, Integer> cropCounts = new HashMap<>();
+        private ProductionWindow(long windowStart) { this.windowStart = windowStart; }
     }
 
     private record ChestLocation(UUID worldId, int x, int y, int z) { }
