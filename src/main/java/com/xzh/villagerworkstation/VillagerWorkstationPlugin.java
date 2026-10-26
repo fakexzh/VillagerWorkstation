@@ -79,14 +79,15 @@ public final class VillagerWorkstationPlugin extends JavaPlugin implements Liste
             if (world == null || !world.isChunkLoaded(workstation.x() >> 4, workstation.z() >> 4)) continue;
 
             Block stationBlock = world.getBlockAt(workstation.x(), workstation.y(), workstation.z());
-            if (stationBlock.getType() != Material.COMPOSTER) continue;
+            Villager.Profession stationProfession = professionForStation(stationBlock.getType());
+            if (stationProfession == null) continue;
 
             Collection<Entity> nearbyEntities = world.getNearbyEntities(
                     stationBlock.getLocation().add(0.5, 0.5, 0.5),
                     workRadius, workRadius, workRadius,
                     entity -> entity instanceof Villager villager
                             && !villager.isDead()
-                            && villager.getProfession() == Villager.Profession.FARMER
+                            && villager.getProfession() == stationProfession
                             && !assignedFarmers.contains(villager.getUniqueId())
             );
 
@@ -100,6 +101,11 @@ public final class VillagerWorkstationPlugin extends JavaPlugin implements Liste
             Block chestBlock = findCopperChest(workstation, world, stationBlock.getLocation(), chestRadius);
             if (chestBlock == null || !(chestBlock.getState() instanceof Container container)) continue;
             Inventory inventory = container.getInventory();
+
+            if (stationProfession != Villager.Profession.FARMER) {
+                collectProfessionDrops(world, stationBlock.getLocation(), inventory, stationProfession, workRadius);
+                continue;
+            }
 
             int harvested = 0;
             int minX = stationBlock.getX() - workRadius;
@@ -179,6 +185,69 @@ public final class VillagerWorkstationPlugin extends JavaPlugin implements Liste
             }
         }
         return null;
+    }
+
+    private Villager.Profession professionForStation(Material material) {
+        return switch (material) {
+            case COMPOSTER -> Villager.Profession.FARMER;
+            case BARREL -> Villager.Profession.FISHERMAN;
+            case LOOM -> Villager.Profession.SHEPHERD;
+            case FLETCHING_TABLE -> Villager.Profession.FLETCHER;
+            case LECTERN -> Villager.Profession.LIBRARIAN;
+            case CARTOGRAPHY_TABLE -> Villager.Profession.CARTOGRAPHER;
+            case BREWING_STAND -> Villager.Profession.CLERIC;
+            case BLAST_FURNACE -> Villager.Profession.ARMORER;
+            case SMOKER -> Villager.Profession.BUTCHER;
+            case CAULDRON -> Villager.Profession.LEATHERWORKER;
+            case STONECUTTER -> Villager.Profession.MASON;
+            case SMITHING_TABLE -> Villager.Profession.TOOLSMITH;
+            case GRINDSTONE -> Villager.Profession.WEAPONSMITH;
+            default -> null;
+        };
+    }
+
+    private String stationProfessionName(Villager.Profession profession) {
+        return profession.name().toLowerCase(java.util.Locale.ROOT).replace('_', ' ');
+    }
+
+    /** Collects nearby dropped items associated with the matching profession without breaking blocks or harming entities. */
+    private void collectProfessionDrops(World world, Location center, Inventory inventory,
+                                       Villager.Profession profession, int radius) {
+        int limit = Math.max(1, getConfig().getInt("max-items-per-cycle", 8));
+        int movedStacks = 0;
+        for (Entity entity : world.getNearbyEntities(center, Math.min(radius, 6), Math.min(radius, 4),
+                Math.min(radius, 6), e -> e instanceof org.bukkit.entity.Item)) {
+            if (movedStacks >= limit) break;
+            org.bukkit.entity.Item dropped = (org.bukkit.entity.Item) entity;
+            ItemStack stack = dropped.getItemStack();
+            if (!matchesProfessionItem(profession, stack.getType())) continue;
+            if (!canFit(inventory, List.of(stack))) continue;
+            Map<Integer, ItemStack> leftovers = inventory.addItem(stack.clone());
+            if (leftovers.isEmpty()) {
+                dropped.remove();
+                movedStacks++;
+            }
+        }
+    }
+
+    private boolean matchesProfessionItem(Villager.Profession profession, Material material) {
+        String n = material.name();
+        return switch (profession) {
+            case FISHERMAN -> n.contains("FISH") || n.equals("FISHING_ROD");
+            case SHEPHERD -> n.endsWith("_WOOL") || n.equals("SHEARS") || n.endsWith("_CARPET");
+            case FLETCHER -> n.equals("ARROW") || n.equals("SPECTRAL_ARROW") || n.equals("FEATHER") || n.equals("FLINT") || n.equals("BOW") || n.equals("CROSSBOW") || n.equals("STICK");
+            case LIBRARIAN -> n.contains("BOOK") || n.equals("PAPER") || n.equals("INK_SAC");
+            case CARTOGRAPHER -> n.equals("MAP") || n.equals("FILLED_MAP") || n.equals("PAPER") || n.equals("COMPASS") || n.equals("GLASS_PANE");
+            case CLERIC -> n.equals("ROTTEN_FLESH") || n.equals("GOLD_INGOT") || n.equals("GOLD_NUGGET") || n.equals("REDSTONE") || n.equals("GLOWSTONE_DUST") || n.equals("LAPIS_LAZULI") || n.equals("GLASS_BOTTLE") || n.contains("POTION");
+            case ARMORER -> n.contains("HELMET") || n.contains("CHESTPLATE") || n.contains("LEGGINGS") || n.contains("BOOTS") || n.contains("SHIELD") || n.equals("IRON_INGOT") || n.equals("IRON_NUGGET") || n.equals("CHAIN");
+            case BUTCHER -> n.contains("BEEF") || n.contains("PORKCHOP") || n.contains("CHICKEN") || n.contains("MUTTON") || n.contains("RABBIT") || n.contains("COD") || n.contains("SALMON");
+            case LEATHERWORKER -> n.equals("LEATHER") || n.startsWith("LEATHER_") || n.equals("RABBIT_HIDE") || n.equals("RABBIT_FOOT");
+            case MASON -> n.contains("STONE") || n.contains("BRICK") || n.contains("TERRACOTTA") || n.contains("QUARTZ") || n.equals("CLAY_BALL");
+            case TOOLSMITH -> n.contains("PICKAXE") || n.contains("SHOVEL") || n.contains("HOE") || n.equals("IRON_INGOT") || n.equals("IRON_NUGGET") || n.equals("DIAMOND");
+            case WEAPONSMITH -> n.contains("SWORD") || n.contains("AXE") || n.equals("IRON_INGOT") || n.equals("IRON_NUGGET") || n.equals("DIAMOND");
+            case FARMER -> false;
+            default -> false;
+        };
     }
 
     private boolean isSupportedCrop(Block block) {
@@ -316,8 +385,8 @@ public final class VillagerWorkstationPlugin extends JavaPlugin implements Liste
 
         Block target = player.getTargetBlockExact(6);
         if (args[0].equalsIgnoreCase("set")) {
-            if (target == null || target.getType() != Material.COMPOSTER) {
-                player.sendMessage(color("&cLook at a composter within 6 blocks."));
+            if (target == null || professionForStation(target.getType()) == null) {
+                player.sendMessage(color("&cLook at a supported villager workstation within 6 blocks."));
                 return true;
             }
             Location location = target.getLocation();
@@ -325,8 +394,9 @@ public final class VillagerWorkstationPlugin extends JavaPlugin implements Liste
                     location.getBlockX(), location.getBlockY(), location.getBlockZ());
             workstations.put(workstation.key(), workstation);
             saveWorkstations();
-            player.sendMessage(color("&aFarmer workstation registered. Place a copper chest within "
-                    + getConfig().getInt("chest-radius", 8) + " blocks and bring a Farmer villager nearby."));
+            player.sendMessage(color("&a" + stationProfessionName(professionForStation(target.getType()))
+                    + " workstation registered. Place a copper chest within "
+                    + getConfig().getInt("chest-radius", 8) + " blocks and bring the matching villager nearby."));
             return true;
         }
 
