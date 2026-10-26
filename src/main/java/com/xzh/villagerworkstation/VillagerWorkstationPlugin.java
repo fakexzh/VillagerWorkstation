@@ -427,7 +427,7 @@ public final class VillagerWorkstationPlugin extends JavaPlugin implements Liste
                     location.getBlockX(), location.getBlockY(), location.getBlockZ());
             workstations.put(workstation.key(), workstation);
             saveWorkstations();
-            player.sendMessage(color("&a" + stationProfessionName(professionForStation(target.getType()))
+            player.sendMessage(color("&a" + professionForStation(target.getType()).name().toLowerCase(java.util.Locale.ROOT)
                     + " workstation registered. Place a copper chest within "
                     + getConfig().getInt("chest-radius", 8) + " blocks and bring the matching villager nearby."));
             return true;
