@@ -1,21 +1,14 @@
-# Shared worker scheduler. 20 ticks is approximately one second at full TPS.
+# Custom production is limited to farmer and fisherman workstations only.
+# All other villager professions remain vanilla and are not modified by this plugin.
 scan-interval-ticks: 40
 work-radius: 8
-# During daytime, matching villagers within this range are guided back to their station.
+# During daytime, matching farmer/fisherman villagers within this range are guided back to their station.
 return-to-work-radius: 32
 chest-radius: 8
 
-# Farmer harvests every mature supported crop in its scan area and replants it.
-# Harvest leftovers go directly into the copper chest, never into the composter.
+# Farmers harvest mature wheat, carrots, potatoes and beetroot, replant them,
+# and store every harvest drop directly in the copper chest.
 farmer-enabled: true
 
-# Fishermen catch one fish per worker cycle when water is within the work radius.
+# Fishermen simulate one fish catch per work cycle when water is nearby.
 fisherman-fishing-enabled: true
-
-# Other professions collect matching, already-dropped items near their workstation.
-profession-drop-collection-enabled: true
-
-# Show each loaded villager's current profession above its head.
-# This replaces existing custom names on villagers while enabled.
-profession-names:
-  enabled: true
