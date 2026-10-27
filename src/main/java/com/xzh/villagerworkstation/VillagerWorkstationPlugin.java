@@ -44,8 +44,8 @@ public final class VillagerWorkstationPlugin extends JavaPlugin implements Liste
     private final Map<String, String> workstationStatuses = new HashMap<>();
     private final Map<String, ProductionWindow> productionWindows = new HashMap<>();
     private static final long PRODUCTION_WINDOW_MILLIS = 60L * 60L * 1000L;
-    private static final int MAX_FISH_PER_HOUR = 64;
-    private static final int MAX_ITEMS_PER_CROP_PER_HOUR = 64;
+    private static final int MAX_FISH_PER_HOUR = 48;
+    private static final int MAX_ITEMS_PER_CROP_PER_HOUR = 48;
     private File productionFile;
     private YamlConfiguration productionData;
     private BukkitTask workerTask;
