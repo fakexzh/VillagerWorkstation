@@ -1,0 +1,68 @@
+# Initial catalogue. Dimensions are real per-specimen measurements, not just lore.
+# Model identifiers are reserved for the accompanying resource pack.
+fish:
+  river_carp:
+    display-name: "River Carp"
+    rarity: COMMON
+    model: "xzh:fishing/fish/river_carp"
+    weight: { minimum: 0.50, maximum: 3.00, typical: 1.40 }
+    dimensions:
+      length: { minimum: 18.0, maximum: 48.0 }
+      height: { minimum: 5.0, maximum: 14.0 }
+      width: { minimum: 3.0, maximum: 8.0 }
+    value: { base-price: 8.0 }
+    habitat:
+      biomes: [RIVER, PLAINS]
+      water-depth: { minimum: 1, maximum: 8 }
+  golden_koi:
+    display-name: "Golden Koi"
+    rarity: RARE
+    model: "xzh:fishing/fish/golden_koi"
+    weight: { minimum: 1.00, maximum: 8.00, typical: 3.50 }
+    dimensions:
+      length: { minimum: 25.0, maximum: 72.0 }
+      height: { minimum: 7.0, maximum: 22.0 }
+      width: { minimum: 4.0, maximum: 12.0 }
+    value: { base-price: 35.0 }
+    habitat:
+      biomes: [RIVER, PLAINS, FOREST]
+      water-depth: { minimum: 1, maximum: 12 }
+  bluefin_tuna:
+    display-name: "Bluefin Tuna"
+    rarity: EPIC
+    model: "xzh:fishing/fish/bluefin_tuna"
+    weight: { minimum: 5.00, maximum: 80.00, typical: 28.00 }
+    dimensions:
+      length: { minimum: 55.0, maximum: 210.0 }
+      height: { minimum: 15.0, maximum: 62.0 }
+      width: { minimum: 10.0, maximum: 42.0 }
+    value: { base-price: 120.0 }
+    habitat:
+      biomes: [OCEAN, DEEP_OCEAN, COLD_OCEAN, LUKEWARM_OCEAN, WARM_OCEAN]
+      water-depth: { minimum: 8, maximum: 64 }
+  ancient_coelacanth:
+    display-name: "Ancient Coelacanth"
+    rarity: LEGENDARY
+    model: "xzh:fishing/fish/ancient_coelacanth"
+    weight: { minimum: 10.00, maximum: 60.00, typical: 32.00 }
+    dimensions:
+      length: { minimum: 65.0, maximum: 165.0 }
+      height: { minimum: 18.0, maximum: 55.0 }
+      width: { minimum: 12.0, maximum: 38.0 }
+    value: { base-price: 300.0 }
+    habitat:
+      biomes: [DEEP_OCEAN, DEEP_COLD_OCEAN, DEEP_LUKEWARM_OCEAN]
+      water-depth: { minimum: 18, maximum: 64 }
+  crystal_fish:
+    display-name: "Crystal Fish"
+    rarity: MYTHICAL
+    model: "xzh:fishing/fish/crystal_fish"
+    weight: { minimum: 0.20, maximum: 2.00, typical: 0.80 }
+    dimensions:
+      length: { minimum: 10.0, maximum: 32.0 }
+      height: { minimum: 4.0, maximum: 12.0 }
+      width: { minimum: 2.0, maximum: 7.0 }
+    value: { base-price: 500.0 }
+    habitat:
+      biomes: [DEEP_DARK, LUSH_CAVES]
+      water-depth: { minimum: 4, maximum: 32 }
