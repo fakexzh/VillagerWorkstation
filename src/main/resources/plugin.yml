@@ -10,7 +10,7 @@ commands:
     usage: /work
   vw:
     description: Manage VillagerWorkstation job stations.
-    usage: /vw <set|remove|list|reload|help>
+    usage: /vw <set|remove|list|fish|reload|help>
     permission: villagerworkstation.admin
 permissions:
   villagerworkstation.admin:
