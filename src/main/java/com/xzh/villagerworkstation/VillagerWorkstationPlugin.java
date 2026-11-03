@@ -36,7 +36,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.ThreadLocalRandom;\nimport com.xzh.villagerworkstation.fishing.FishRegistry;\nimport com.xzh.villagerworkstation.fishing.FishItemFactory;
 
 public final class VillagerWorkstationPlugin extends JavaPlugin implements Listener {
     private final Map<String, Workstation> workstations = new HashMap<>();
@@ -48,7 +48,7 @@ public final class VillagerWorkstationPlugin extends JavaPlugin implements Liste
     private static final int MAX_ITEMS_PER_CROP_PER_HOUR = 48;
     private File productionFile;
     private YamlConfiguration productionData;
-    private BukkitTask workerTask;
+    private BukkitTask workerTask;\n    private final FishRegistry fishRegistry = new FishRegistry();\n    private FishItemFactory fishItemFactory;
 
     @Override
     public void onEnable() {
