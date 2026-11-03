@@ -17,9 +17,10 @@ farmer-max-items-per-crop-per-hour: 48
 fisherman-fishing-enabled: true
 fisherman-max-fish-per-hour: 48
 
-# Custom player fishing foundation. Full interactive mechanics are introduced in subsequent stages.
+# Player fishing replaces vanilla fish catches with individually generated custom specimens.
+# The automated fisherman workstation system above remains independent.
 custom-fishing:
-  enabled: false
+  enabled: true
   fish-catalogue: fish.yml
   consume-bait-on-success-only: true
   specimen-identity: true

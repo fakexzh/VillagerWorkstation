@@ -69,3 +69,8 @@ The custom fishing catalogue is being introduced in stages. The initial data fou
 `/vw fish list`. Each generated specimen is designed to carry a unique server-side identity,
 weight, and physical dimensions; the existing automated fisherman workstation production remains
 separate until the interactive fishing engine replaces it.
+
+
+## Player fishing
+
+Successful rod catches are replaced with individually generated fish from the full AllTheFishV4.1 catalogue. Each specimen stores a unique ID, species, rarity, weight, length, height, width, and size category in persistent item data. Player fishing is independent of the automated fisherman workstation simulation. The matching size-variant resource-pack overlay is distributed separately.

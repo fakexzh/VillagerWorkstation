@@ -37,8 +37,14 @@ public final class FishItemFactory {
     public ItemStack create(FishDefinition definition, FishInstance fish) {
         ItemStack item = new ItemStack(Material.COD, 1);
         ItemMeta meta = item.getItemMeta();
-        meta.setDisplayName(ChatColor.AQUA + definition.displayName());
+        String modelId = definition.model();
+        NamespacedKey modelKey = NamespacedKey.fromString(modelId + "_" + fish.sizeCategory().toLowerCase(java.util.Locale.ROOT));
+        if (modelKey != null) meta.setItemModel(modelKey);
+        String sizeName = fish.sizeCategory().charAt(0) + fish.sizeCategory().substring(1).toLowerCase(java.util.Locale.ROOT);
+        meta.setDisplayName(ChatColor.AQUA + sizeName + " " + definition.displayName());
         meta.setLore(List.of(
+                ChatColor.GRAY + "Species: " + ChatColor.WHITE + definition.displayName(),
+                ChatColor.GRAY + "Size: " + ChatColor.WHITE + sizeName,
                 ChatColor.GRAY + "Rarity: " + ChatColor.WHITE + fish.rarity().name(),
                 ChatColor.GRAY + String.format(java.util.Locale.ROOT, "Weight: %.2f kg", fish.weightKg()),
                 ChatColor.GRAY + String.format(java.util.Locale.ROOT, "Length: %.2f cm", fish.lengthCm()),

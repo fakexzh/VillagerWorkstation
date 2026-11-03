@@ -17,10 +17,11 @@ public final class FishGenerator {
                 * random.nextDouble(0.96, 1.041);
         double width = interpolate(definition.minWidthCm(), definition.maxWidthCm(), normalized)
                 * random.nextDouble(0.96, 1.041);
-        String category = weight < definition.minWeightKg()
-                + (definition.maxWeightKg() - definition.minWeightKg()) / 3.0 ? "SMALL"
-                : weight < definition.minWeightKg()
-                + 2.0 * (definition.maxWeightKg() - definition.minWeightKg()) / 3.0 ? "MEDIUM" : "LARGE";
+        double sizePosition = (weight - definition.minWeightKg())
+                / Math.max(0.000001, definition.maxWeightKg() - definition.minWeightKg());
+        String category = sizePosition < 0.25 ? "SMALL"
+                : sizePosition < 0.50 ? "MEDIUM"
+                : sizePosition < 0.75 ? "LARGE" : "GIANT";
         return new FishInstance(UUID.randomUUID(), definition.id(), definition.rarity(),
                 round(weight), round(length), round(height), round(width), category,
                 System.currentTimeMillis());
