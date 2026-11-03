@@ -16,3 +16,12 @@ farmer-max-items-per-crop-per-hour: 48
 # Catch odds: cod 60%, salmon 30%, tropical fish 6%, pufferfish 4%.
 fisherman-fishing-enabled: true
 fisherman-max-fish-per-hour: 48
+
+# Player fishing replaces vanilla fish catches with individually generated custom specimens.
+# The automated fisherman workstation system above remains independent.
+custom-fishing:
+  enabled: true
+  fish-catalogue: fish.yml
+  consume-bait-on-success-only: true
+  specimen-identity: true
+  physical-size-data: true

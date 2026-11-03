@@ -37,6 +37,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
+import com.xzh.villagerworkstation.fishing.FishRegistry;
+import com.xzh.villagerworkstation.fishing.FishItemFactory;
 
 public final class VillagerWorkstationPlugin extends JavaPlugin implements Listener {
     private final Map<String, Workstation> workstations = new HashMap<>();
@@ -49,13 +51,19 @@ public final class VillagerWorkstationPlugin extends JavaPlugin implements Liste
     private File productionFile;
     private YamlConfiguration productionData;
     private BukkitTask workerTask;
+    private final FishRegistry fishRegistry = new FishRegistry();
+    private FishItemFactory fishItemFactory;
 
     @Override
     public void onEnable() {
         saveDefaultConfig();
         loadWorkstations();
         loadProductionWindows();
+        fishRegistry.load(this);
+        fishItemFactory = new FishItemFactory(this);
         Bukkit.getPluginManager().registerEvents(this, this);
+        Bukkit.getPluginManager().registerEvents(
+                new com.xzh.villagerworkstation.fishing.FishFishingListener(this, fishRegistry, fishItemFactory), this);
         startWorkerTask();
         getLogger().info("Enabled with " + workstations.size() + " registered farmer/fisherman workstation(s).");
     }
@@ -546,11 +554,36 @@ public final class VillagerWorkstationPlugin extends JavaPlugin implements Liste
             sender.sendMessage(color("&e/vw remove &7- Unregister the block you're looking at."));
             sender.sendMessage(color("&e/vw list &7- List registered workstations."));
             sender.sendMessage(color("&e/vw reload &7- Reload config and workstation records."));
+            sender.sendMessage(color("&e/vw fish list [page] &7- Browse the loaded fish catalogue."));
             return true;
         }
 
         if (!(sender instanceof org.bukkit.entity.Player player)) {
             sender.sendMessage(color("&cThis command must be run by a player."));
+            return true;
+        }
+
+        if (args[0].equalsIgnoreCase("fish")) {
+            if (args.length < 2 || !args[1].equalsIgnoreCase("list")) {
+                player.sendMessage(color("&eUsage: /vw fish list [page]"));
+                return true;
+            }
+            int page = 1;
+            if (args.length >= 3) {
+                try { page = Math.max(1, Integer.parseInt(args[2])); }
+                catch (NumberFormatException ignored) { page = 1; }
+            }
+            List<com.xzh.villagerworkstation.fishing.FishDefinition> species =
+                    new ArrayList<>(fishRegistry.all());
+            int pageSize = 20;
+            int pages = Math.max(1, (species.size() + pageSize - 1) / pageSize);
+            page = Math.min(page, pages);
+            player.sendMessage(color("&bFish catalogue &7- page &f" + page + "&7/&f" + pages
+                    + " &8(" + species.size() + " species)"));
+            for (int i = (page - 1) * pageSize; i < Math.min(page * pageSize, species.size()); i++) {
+                var fish = species.get(i);
+                player.sendMessage(color("&7- &f" + fish.displayName() + " &8[" + fish.rarity().name() + "]"));
+            }
             return true;
         }
 
@@ -571,6 +604,7 @@ public final class VillagerWorkstationPlugin extends JavaPlugin implements Liste
         if (args[0].equalsIgnoreCase("reload")) {
             reloadConfig();
             loadWorkstations();
+            fishRegistry.load(this);
             startWorkerTask();
             player.sendMessage(color("&aVillagerWorkstation config reloaded."));
             return true;
