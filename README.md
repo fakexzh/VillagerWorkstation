@@ -60,3 +60,12 @@ Permission: `villagerworkstation.admin` (default: OP).
 - A villager cannot be assigned to multiple workstations in the same cycle.
 - Workstation records persist in `plugins/VillagerWorkstation/workstations.yml`.
 - Test on a copy of your server first, especially if claim/protection plugins are installed. Compatibility depends on your exact Paper/Purpur build and other plugins.
+
+
+## Custom fishing development
+
+The custom fishing catalogue is being introduced in stages. The initial data foundation is loaded from
+`plugins/VillagerWorkstation/fish.yml`. Administrators can inspect the loaded species with
+`/vw fish list`. Each generated specimen is designed to carry a unique server-side identity,
+weight, and physical dimensions; the existing automated fisherman workstation production remains
+separate until the interactive fishing engine replaces it.
