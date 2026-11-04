@@ -19,11 +19,13 @@ public final class FishFishingListener implements Listener {
     private final JavaPlugin plugin;
     private final FishRegistry registry;
     private final FishItemFactory itemFactory;
+    private final FishCollectionStore collectionStore;
 
     public FishFishingListener(JavaPlugin plugin, FishRegistry registry, FishItemFactory itemFactory) {
         this.plugin = plugin;
         this.registry = registry;
         this.itemFactory = itemFactory;
+        this.collectionStore = new FishCollectionStore(plugin);
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
@@ -43,6 +45,7 @@ public final class FishFishingListener implements Listener {
         Map<Integer, ItemStack> leftovers = event.getPlayer().getInventory().addItem(customFish);
         leftovers.values().forEach(item ->
                 event.getPlayer().getWorld().dropItemNaturally(event.getPlayer().getLocation(), item));
+        collectionStore.recordCatch(event.getPlayer(), definition, specimen);
 
         String size = specimen.sizeCategory().charAt(0)
                 + specimen.sizeCategory().substring(1).toLowerCase(java.util.Locale.ROOT);
