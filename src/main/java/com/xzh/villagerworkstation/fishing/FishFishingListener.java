@@ -14,7 +14,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 
-/** Replaces successful vanilla fish catches with individually generated custom specimens. */
+/**
+ * Keeps vanilla fishing as the default outcome and replaces only successful
+ * custom-fish rolls with individually generated specimens.
+ */
 public final class FishFishingListener implements Listener {
     private final JavaPlugin plugin;
     private final FishRegistry registry;
@@ -34,12 +37,18 @@ public final class FishFishingListener implements Listener {
                 || !plugin.getConfig().getBoolean("custom-fishing.enabled", true)
                 || !(event.getCaught() instanceof Item caughtEntity)) return;
 
+        // Most successful catches remain completely vanilla. Only the configured
+        // share is eligible to become a custom specimen.
+        double customChance = plugin.getConfig().getDouble("custom-fishing.custom-catch-chance", 25.0);
+        customChance = Math.max(0.0, Math.min(100.0, customChance));
+        if (ThreadLocalRandom.current().nextDouble(100.0) >= customChance) return;
+
         List<FishDefinition> fish = new ArrayList<>(registry.all());
         if (fish.isEmpty()) return;
         FishDefinition definition = chooseSpecies(fish);
         FishInstance specimen = new FishGenerator().generate(definition);
 
-        // Remove the vanilla catch so it cannot be duplicated alongside the custom fish.
+        // Remove the vanilla catch only after a valid custom fish was selected.
         caughtEntity.remove();
         ItemStack customFish = itemFactory.create(definition, specimen);
         Map<Integer, ItemStack> leftovers = event.getPlayer().getInventory().addItem(customFish);
