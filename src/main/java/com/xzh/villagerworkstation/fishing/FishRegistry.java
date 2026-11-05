@@ -14,6 +14,7 @@ import java.util.Map;
 /** Loads and validates species definitions from plugins/VillagerWorkstation/fish.yml. */
 public final class FishRegistry {
     private final Map<String, FishDefinition> definitions = new LinkedHashMap<>();
+    private final Map<String, FishDefinition> definitionsByModel = new LinkedHashMap<>();
 
     public void load(JavaPlugin plugin) {
         File file = new File(plugin.getDataFolder(), plugin.getConfig().getString(
@@ -61,6 +62,10 @@ public final class FishRegistry {
         if (loaded.isEmpty()) throw new IllegalStateException("fish.yml contains no fish definitions.");
         definitions.clear();
         definitions.putAll(loaded);
+        definitionsByModel.clear();
+        for (FishDefinition definition : definitions.values()) {
+            definitionsByModel.put(definition.model().toLowerCase(java.util.Locale.ROOT), definition);
+        }
         long mapped = definitions.values().stream().filter(fish -> !fish.biomes().isEmpty()).count();
         plugin.getLogger().info("Loaded " + definitions.size() + " fish species (" + mapped
                 + " with biome habitats configured).");
@@ -68,6 +73,12 @@ public final class FishRegistry {
 
     public FishDefinition get(String id) {
         return definitions.get(id);
+    }
+
+    /** Resolves a datapack catch by its minecraft:item_model component. */
+    public FishDefinition getByModel(String itemModel) {
+        if (itemModel == null || itemModel.isBlank()) return null;
+        return definitionsByModel.get(itemModel.toLowerCase(java.util.Locale.ROOT));
     }
 
     public Collection<FishDefinition> all() {
