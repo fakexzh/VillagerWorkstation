@@ -2,7 +2,7 @@ name: Build VillagerWorkstation
 
 on:
   push:
-    branches: [main, master]
+    branches: [main, master, feature/fish-collection-tracking]
   pull_request:
   workflow_dispatch:
 
@@ -30,3 +30,13 @@ jobs:
           name: VillagerWorkstation-0.5.0
           path: build/libs/VillagerWorkstation-0.5.0.jar
           if-no-files-found: error
+      - name: Upload All The Fish datapack ZIP
+        if: ${{ hashFiles('datapacks/All The Fish 5.1.0 (26.3).zip') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: All-The-Fish-5.1.0-26.3
+          path: datapacks/All The Fish 5.1.0 (26.3).zip
+          if-no-files-found: error
+      - name: Report missing datapack ZIP
+        if: ${{ hashFiles('datapacks/All The Fish 5.1.0 (26.3).zip') == '' }}
+        run: echo '::warning::All The Fish ZIP is not committed yet; upload it to datapacks/ before this build can publish the separate datapack artifact.'

@@ -1,6 +1,7 @@
 package com.xzh.villagerworkstation.fishing;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 
 /** Immutable species-level constraints. Individual catches store their own dimensions and weight. */
@@ -19,6 +20,8 @@ public record FishDefinition(
         double maxWidthCm,
         double basePrice,
         List<String> biomes,
+        List<String> waterTypes,
+        List<String> dimensions,
         int minWaterDepth,
         int maxWaterDepth,
         String model
@@ -27,7 +30,9 @@ public record FishDefinition(
         Objects.requireNonNull(id, "id");
         Objects.requireNonNull(displayName, "displayName");
         Objects.requireNonNull(rarity, "rarity");
-        biomes = List.copyOf(biomes);
+        biomes = normalize(biomes);
+        waterTypes = normalize(waterTypes);
+        dimensions = normalize(dimensions);
         Objects.requireNonNull(model, "model");
         if (!id.matches("[a-z0-9_]+")) throw new IllegalArgumentException("Invalid fish id: " + id);
         if (minWeightKg <= 0 || maxWeightKg < minWeightKg
@@ -39,5 +44,11 @@ public record FishDefinition(
             throw new IllegalArgumentException("Invalid physical dimensions for " + id);
         if (basePrice < 0 || minWaterDepth < 0 || maxWaterDepth < minWaterDepth)
             throw new IllegalArgumentException("Invalid price or habitat depth for " + id);
+    }
+
+    private static List<String> normalize(List<String> values) {
+        return values.stream().filter(Objects::nonNull)
+                .map(value -> value.trim().toUpperCase(Locale.ROOT))
+                .filter(value -> !value.isEmpty()).distinct().toList();
     }
 }

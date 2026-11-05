@@ -14,9 +14,11 @@ import java.util.Map;
 /** Loads and validates species definitions from plugins/VillagerWorkstation/fish.yml. */
 public final class FishRegistry {
     private final Map<String, FishDefinition> definitions = new LinkedHashMap<>();
+    private final Map<String, FishDefinition> definitionsByModel = new LinkedHashMap<>();
 
     public void load(JavaPlugin plugin) {
-        File file = new File(plugin.getDataFolder(), "fish.yml");
+        File file = new File(plugin.getDataFolder(), plugin.getConfig().getString(
+                "custom-fishing.fish-catalogue", "fish.yml"));
         if (!file.exists()) plugin.saveResource("fish.yml", false);
         YamlConfiguration yaml = YamlConfiguration.loadConfiguration(file);
         ConfigurationSection section = yaml.getConfigurationSection("fish");
@@ -27,6 +29,7 @@ public final class FishRegistry {
             ConfigurationSection fish = section.getConfigurationSection(id);
             if (fish == null) continue;
             try {
+                ConfigurationSection habitat = fish.getConfigurationSection("habitat");
                 FishDefinition definition = new FishDefinition(
                         id,
                         fish.getString("display-name", id),
@@ -42,6 +45,10 @@ public final class FishRegistry {
                         fish.getDouble("dimensions.width.maximum"),
                         fish.getDouble("value.base-price"),
                         fish.getStringList("habitat.biomes"),
+                        habitat == null || !habitat.contains("water-types")
+                                ? List.of("ANY") : habitat.getStringList("water-types"),
+                        habitat == null || !habitat.contains("dimensions")
+                                ? List.of("OVERWORLD") : habitat.getStringList("dimensions"),
                         fish.getInt("habitat.water-depth.minimum", 0),
                         fish.getInt("habitat.water-depth.maximum", 64),
                         fish.getString("model", "xzh:fishing/fish/" + id)
@@ -55,11 +62,23 @@ public final class FishRegistry {
         if (loaded.isEmpty()) throw new IllegalStateException("fish.yml contains no fish definitions.");
         definitions.clear();
         definitions.putAll(loaded);
-        plugin.getLogger().info("Loaded " + definitions.size() + " fish species.");
+        definitionsByModel.clear();
+        for (FishDefinition definition : definitions.values()) {
+            definitionsByModel.put(definition.model().toLowerCase(java.util.Locale.ROOT), definition);
+        }
+        long mapped = definitions.values().stream().filter(fish -> !fish.biomes().isEmpty()).count();
+        plugin.getLogger().info("Loaded " + definitions.size() + " fish species (" + mapped
+                + " with biome habitats configured).");
     }
 
     public FishDefinition get(String id) {
         return definitions.get(id);
+    }
+
+    /** Resolves a datapack catch by its minecraft:item_model component. */
+    public FishDefinition getByModel(String itemModel) {
+        if (itemModel == null || itemModel.isBlank()) return null;
+        return definitionsByModel.get(itemModel.toLowerCase(java.util.Locale.ROOT));
     }
 
     public Collection<FishDefinition> all() {

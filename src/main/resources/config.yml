@@ -17,8 +17,9 @@ farmer-max-items-per-crop-per-hour: 48
 fisherman-fishing-enabled: true
 fisherman-max-fish-per-hour: 48
 
-# Player fishing replaces vanilla fish catches with individually generated custom specimens.
-# The automated fisherman workstation system above remains independent.
+# All The Fish datapack controls custom-fish catch odds and all habitat/time/weather rules.
+# The plugin never rolls a second catch chance or replaces vanilla fish.
+# Known datapack fish are enriched with specimen measurements and recorded in the library.
 custom-fishing:
   enabled: true
   fish-catalogue: fish.yml
