@@ -14,16 +14,19 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 
-/** Replaces successful vanilla fish catches with individually generated custom specimens. */
+/** Keeps vanilla fishing intact and occasionally replaces a catch with a custom specimen. */
 public final class FishFishingListener implements Listener {
     private final JavaPlugin plugin;
     private final FishRegistry registry;
     private final FishItemFactory itemFactory;
+    private final FishCollectionManager collectionManager;
 
-    public FishFishingListener(JavaPlugin plugin, FishRegistry registry, FishItemFactory itemFactory) {
+    public FishFishingListener(JavaPlugin plugin, FishRegistry registry, FishItemFactory itemFactory,
+                               FishCollectionManager collectionManager) {
         this.plugin = plugin;
         this.registry = registry;
         this.itemFactory = itemFactory;
+        this.collectionManager = collectionManager;
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
@@ -32,17 +35,25 @@ public final class FishFishingListener implements Listener {
                 || !plugin.getConfig().getBoolean("custom-fishing.enabled", true)
                 || !(event.getCaught() instanceof Item caughtEntity)) return;
 
+        int chance = Math.max(0, Math.min(100,
+                plugin.getConfig().getInt("custom-fishing.chance-percent", 25)));
+        if (ThreadLocalRandom.current().nextInt(100) >= chance) return;
+
         List<FishDefinition> fish = new ArrayList<>(registry.all());
         if (fish.isEmpty()) return;
         FishDefinition definition = chooseSpecies(fish);
         FishInstance specimen = new FishGenerator().generate(definition);
 
-        // Remove the vanilla catch so it cannot be duplicated alongside the custom fish.
+        // Only custom rolls replace vanilla catches. Other rolls retain vanilla cod, salmon,
+        // tropical fish and pufferfish without changing the original caught item.
         caughtEntity.remove();
         ItemStack customFish = itemFactory.create(definition, specimen);
         Map<Integer, ItemStack> leftovers = event.getPlayer().getInventory().addItem(customFish);
         leftovers.values().forEach(item ->
                 event.getPlayer().getWorld().dropItemNaturally(event.getPlayer().getLocation(), item));
+
+        // The collection records only a real custom catch, never a market purchase.
+        collectionManager.recordCatch(event.getPlayer().getUniqueId(), definition, specimen);
 
         String size = specimen.sizeCategory().charAt(0)
                 + specimen.sizeCategory().substring(1).toLowerCase(java.util.Locale.ROOT);
