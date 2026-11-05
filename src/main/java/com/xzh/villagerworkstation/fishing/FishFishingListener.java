@@ -1,34 +1,31 @@
 package com.xzh.villagerworkstation.fishing;
 
 import org.bukkit.ChatColor;
-import org.bukkit.Material;
-import org.bukkit.World;
-import org.bukkit.block.Block;
-import org.bukkit.block.Biome;
-import org.bukkit.block.BlockFace;
+import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Item;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerFishEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.java.JavaPlugin;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.concurrent.ThreadLocalRandom;
 
 /**
- * Keeps vanilla fishing as the default outcome and replaces only successful
- * custom-fish rolls that match the catch location and its habitat constraints.
+ * Integrates with the All The Fish datapack without running a second fishing
+ * lottery. The datapack decides the pool, habitat, time, weather and catch
+ * weights. This listener enriches only a fish item carrying a known datapack
+ * item_model with XZH specimen metadata and collection tracking.
  */
 public final class FishFishingListener implements Listener {
     private final JavaPlugin plugin;
     private final FishRegistry registry;
     private final FishItemFactory itemFactory;
     private final FishCollectionStore collectionStore;
+    private final FishGenerator generator = new FishGenerator();
 
     public FishFishingListener(JavaPlugin plugin, FishRegistry registry, FishItemFactory itemFactory) {
         this.plugin = plugin;
@@ -43,26 +40,24 @@ public final class FishFishingListener implements Listener {
                 || !plugin.getConfig().getBoolean("custom-fishing.enabled", true)
                 || !(event.getCaught() instanceof Item caughtEntity)) return;
 
-        double customChance = plugin.getConfig().getDouble("custom-fishing.custom-catch-chance", 25.0);
-        customChance = Math.max(0.0, Math.min(100.0, customChance));
-        if (ThreadLocalRandom.current().nextDouble(100.0) >= customChance) return;
+        ItemStack caughtStack = caughtEntity.getItemStack();
+        ItemMeta caughtMeta = caughtStack.getItemMeta();
+        if (caughtMeta == null || caughtMeta.getItemModel() == null) return;
 
-        CatchHabitat habitat = resolveHabitat(event);
-        if (habitat == null) return;
+        // The datapack marks custom species with barely_default:fish_<species>.
+        // Vanilla cod, salmon, tropical fish and pufferfish have no matching model
+        // in our registry and are deliberately left untouched.
+        FishDefinition definition = registry.getByModel(caughtMeta.getItemModel().toString());
+        if (definition == null) return;
 
-        List<FishDefinition> eligible = registry.all().stream()
-                .filter(definition -> isEligible(definition, habitat))
-                .toList();
-        if (eligible.isEmpty()) return; // No configured species here: preserve the vanilla catch.
-
-        FishDefinition definition = chooseSpecies(eligible);
-        FishInstance specimen = new FishGenerator().generate(definition);
-
+        FishInstance specimen = generator.generate(definition);
         caughtEntity.remove();
-        ItemStack customFish = itemFactory.create(definition, specimen);
-        Map<Integer, ItemStack> leftovers = event.getPlayer().getInventory().addItem(customFish);
+
+        ItemStack specimenItem = itemFactory.create(definition, specimen);
+        Map<Integer, ItemStack> leftovers = event.getPlayer().getInventory().addItem(specimenItem);
         leftovers.values().forEach(item ->
                 event.getPlayer().getWorld().dropItemNaturally(event.getPlayer().getLocation(), item));
+
         collectionStore.recordCatch(event.getPlayer(), definition, specimen);
 
         String size = specimen.sizeCategory().charAt(0)
@@ -71,71 +66,4 @@ public final class FishFishingListener implements Listener {
                 + definition.displayName() + ChatColor.GRAY + " ("
                 + String.format(Locale.ROOT, "%.2f kg", specimen.weightKg()) + ")");
     }
-
-    private CatchHabitat resolveHabitat(PlayerFishEvent event) {
-        Block fluid = event.getHook().getLocation().getBlock();
-        if (!isFishingFluid(fluid.getType()) && isFishingFluid(fluid.getRelative(BlockFace.DOWN).getType()))
-            fluid = fluid.getRelative(BlockFace.DOWN);
-        if (!isFishingFluid(fluid.getType())) return null;
-
-        Material fluidType = fluid.getType();
-        int depth = 0;
-        Block cursor = fluid;
-        while (depth < 64 && cursor.getType() == fluidType) {
-            depth++;
-            cursor = cursor.getRelative(BlockFace.DOWN);
-        }
-
-        Biome biome = fluid.getBiome();
-        String biomeName = biome.name().toUpperCase(Locale.ROOT);
-        String waterType = fluidType == Material.LAVA ? "LAVA"
-                : biomeName.contains("OCEAN") ? "OCEAN"
-                : biomeName.contains("RIVER") ? "RIVER" : "INLAND";
-        String dimension = switch (event.getPlayer().getWorld().getEnvironment()) {
-            case NORMAL -> "OVERWORLD";
-            case NETHER -> "NETHER";
-            case THE_END -> "END";
-            default -> "OTHER";
-        };
-        return new CatchHabitat(biomeName, waterType, dimension, depth);
-    }
-
-    private boolean isFishingFluid(Material material) {
-        return material == Material.WATER || material == Material.LAVA;
-    }
-
-    private boolean isEligible(FishDefinition fish, CatchHabitat habitat) {
-        if (fish.biomes().isEmpty()) return false;
-        boolean biomeMatches = fish.biomes().contains("ANY") || fish.biomes().contains(habitat.biome());
-        boolean waterMatches = fish.waterTypes().isEmpty()
-                || fish.waterTypes().contains("ANY") || fish.waterTypes().contains(habitat.waterType());
-        boolean dimensionMatches = fish.dimensions().contains("ANY")
-                || fish.dimensions().contains(habitat.dimension());
-        return biomeMatches && waterMatches && dimensionMatches
-                && habitat.depth() >= fish.minWaterDepth()
-                && habitat.depth() <= fish.maxWaterDepth();
-    }
-
-    private FishDefinition chooseSpecies(List<FishDefinition> fish) {
-        double total = fish.stream().mapToDouble(definition -> rarityWeight(definition.rarity())).sum();
-        double roll = ThreadLocalRandom.current().nextDouble(total);
-        for (FishDefinition definition : fish) {
-            roll -= rarityWeight(definition.rarity());
-            if (roll <= 0.0) return definition;
-        }
-        return fish.get(fish.size() - 1);
-    }
-
-    private double rarityWeight(FishRarity rarity) {
-        return switch (rarity) {
-            case COMMON -> 1.0;
-            case UNCOMMON -> 0.55;
-            case RARE -> 0.25;
-            case EPIC -> 0.10;
-            case LEGENDARY -> 0.04;
-            case MYTHICAL -> 0.015;
-        };
-    }
-
-    private record CatchHabitat(String biome, String waterType, String dimension, int depth) { }
 }
