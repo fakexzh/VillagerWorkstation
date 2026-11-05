@@ -73,22 +73,23 @@ public final class FishFishingListener implements Listener {
     }
 
     private CatchHabitat resolveHabitat(PlayerFishEvent event) {
-        Block water = event.getHook().getLocation().getBlock();
-        if (water.getType() != Material.WATER && water.getRelative(BlockFace.DOWN).getType() == Material.WATER)
-            water = water.getRelative(BlockFace.DOWN);
+        Block fluid = event.getHook().getLocation().getBlock();
+        if (!isFishingFluid(fluid.getType()) && isFishingFluid(fluid.getRelative(BlockFace.DOWN).getType()))
+            fluid = fluid.getRelative(BlockFace.DOWN);
+        if (!isFishingFluid(fluid.getType())) return null;
 
+        Material fluidType = fluid.getType();
         int depth = 0;
-        if (water.getType() == Material.WATER) {
-            Block cursor = water;
-            while (depth < 64 && cursor.getType() == Material.WATER) {
-                depth++;
-                cursor = cursor.getRelative(BlockFace.DOWN);
-            }
+        Block cursor = fluid;
+        while (depth < 64 && cursor.getType() == fluidType) {
+            depth++;
+            cursor = cursor.getRelative(BlockFace.DOWN);
         }
 
-        Biome biome = water.getBiome();
+        Biome biome = fluid.getBiome();
         String biomeName = biome.name().toUpperCase(Locale.ROOT);
-        String waterType = biomeName.contains("OCEAN") ? "OCEAN"
+        String waterType = fluidType == Material.LAVA ? "LAVA"
+                : biomeName.contains("OCEAN") ? "OCEAN"
                 : biomeName.contains("RIVER") ? "RIVER" : "INLAND";
         String dimension = switch (event.getPlayer().getWorld().getEnvironment()) {
             case NORMAL -> "OVERWORLD";
@@ -97,6 +98,10 @@ public final class FishFishingListener implements Listener {
             default -> "OTHER";
         };
         return new CatchHabitat(biomeName, waterType, dimension, depth);
+    }
+
+    private boolean isFishingFluid(Material material) {
+        return material == Material.WATER || material == Material.LAVA;
     }
 
     private boolean isEligible(FishDefinition fish, CatchHabitat habitat) {
