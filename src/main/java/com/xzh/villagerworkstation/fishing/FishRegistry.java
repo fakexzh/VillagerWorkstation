@@ -44,8 +44,10 @@ public final class FishRegistry {
                         fish.getDouble("dimensions.width.maximum"),
                         fish.getDouble("value.base-price"),
                         fish.getStringList("habitat.biomes"),
-                        habitat == null ? List.of("ANY") : habitat.getStringList("water-types"),
-                        habitat == null ? List.of("OVERWORLD") : habitat.getStringList("dimensions"),
+                        habitat == null || !habitat.contains("water-types")
+                                ? List.of("ANY") : habitat.getStringList("water-types"),
+                        habitat == null || !habitat.contains("dimensions")
+                                ? List.of("OVERWORLD") : habitat.getStringList("dimensions"),
                         fish.getInt("habitat.water-depth.minimum", 0),
                         fish.getInt("habitat.water-depth.maximum", 64),
                         fish.getString("model", "xzh:fishing/fish/" + id)
