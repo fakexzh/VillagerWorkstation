@@ -53,6 +53,7 @@ public final class VillagerWorkstationPlugin extends JavaPlugin implements Liste
     private BukkitTask workerTask;
     private final FishRegistry fishRegistry = new FishRegistry();
     private FishItemFactory fishItemFactory;
+    private com.xzh.villagerworkstation.fishing.FishCollectionManager fishCollectionManager;
 
     @Override
     public void onEnable() {
@@ -61,9 +62,11 @@ public final class VillagerWorkstationPlugin extends JavaPlugin implements Liste
         loadProductionWindows();
         fishRegistry.load(this);
         fishItemFactory = new FishItemFactory(this);
+        fishCollectionManager = new com.xzh.villagerworkstation.fishing.FishCollectionManager(this);
         Bukkit.getPluginManager().registerEvents(this, this);
         Bukkit.getPluginManager().registerEvents(
-                new com.xzh.villagerworkstation.fishing.FishFishingListener(this, fishRegistry, fishItemFactory), this);
+                new com.xzh.villagerworkstation.fishing.FishFishingListener(
+                        this, fishRegistry, fishItemFactory, fishCollectionManager), this);
         startWorkerTask();
         getLogger().info("Enabled with " + workstations.size() + " registered farmer/fisherman workstation(s).");
     }
