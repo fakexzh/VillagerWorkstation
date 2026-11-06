@@ -19,7 +19,8 @@ fisherman-max-fish-per-hour: 48
 
 # A 20% roll converts a successful vanilla fish catch into an XZH specimen.
 # The other 80% remain vanilla cod, salmon, tropical fish or pufferfish.
-# Junk and treasure are never replaced. Nether lava fish use the same conversion chance.
+# This applies in Overworld water and Nether lava; vanilla catches are never deleted.
+# Junk and treasure are never replaced. Datapack Nether fish use the same conversion chance.
 # Only genuine custom catches are written to fish-collections.yml.
 custom-fishing:
   enabled: true
