@@ -17,13 +17,13 @@ farmer-max-items-per-crop-per-hour: 48
 fisherman-fishing-enabled: true
 fisherman-max-fish-per-hour: 48
 
-# Custom fish are a bonus catch, not a replacement for normal vanilla fishing.
-# At 25%, players average about 2-3 custom fish per 10 successful fishing catches.
-# The remaining catches stay vanilla (cod, salmon, tropical fish and pufferfish).
+# A 20% roll converts a successful vanilla fish catch into an XZH specimen.
+# The other 80% remain vanilla cod, salmon, tropical fish or pufferfish.
+# Junk and treasure are never replaced. Nether lava fish use the same conversion chance.
 # Only genuine custom catches are written to fish-collections.yml.
 custom-fishing:
   enabled: true
-  chance-percent: 25
+  chance-percent: 20
   fish-catalogue: fish.yml
   consume-bait-on-success-only: true
   specimen-identity: true
