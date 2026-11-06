@@ -86,9 +86,10 @@ public final class FishFishingListener implements Listener {
      * than normal PlayerFishEvent catches. Match the spawned item to a live hook
      * that was cast by a player with the required rod.
      *
-     * Vanilla fish stay vanilla when the custom-fish roll fails. Datapack Nether
-     * fish are likewise left untouched if the conversion roll fails or no owner
-     * can be established.
+     * Vanilla fish stay vanilla when the custom-fish roll fails. When the
+     * datapack supplies a custom Nether-fish model, a failed conversion becomes
+     * a normal vanilla fish using the Overworld catch distribution. If no owner
+     * can be established, the spawned item is left intact.
      */
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onLavaFishSpawn(ItemSpawnEvent event) {
