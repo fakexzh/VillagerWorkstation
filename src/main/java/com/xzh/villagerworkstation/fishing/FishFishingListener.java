@@ -118,7 +118,12 @@ public final class FishFishingListener implements Listener {
                 plugin.getLogger().warning("Datapack spawned an unregistered XZH fish: " + fishId);
                 return;
             }
-            if (!passesCustomFishRoll()) return;
+            if (!passesCustomFishRoll()) {
+                // Match Overworld fishing odds: the non-converted catch is a
+                // normal vanilla fish, not a deleted or raw datapack-only item.
+                entity.setItemStack(new ItemStack(chooseVanillaFish()));
+                return;
+            }
         }
 
         if (definition == null) return;
@@ -185,6 +190,15 @@ public final class FishFishingListener implements Listener {
     private boolean isVanillaFish(Material material) {
         return material == Material.COD || material == Material.SALMON
                 || material == Material.TROPICAL_FISH || material == Material.PUFFERFISH;
+    }
+
+    /** Uses the same vanilla catch distribution documented for Overworld fishing. */
+    private Material chooseVanillaFish() {
+        int roll = ThreadLocalRandom.current().nextInt(100);
+        if (roll < 60) return Material.COD;
+        if (roll < 90) return Material.SALMON;
+        if (roll < 96) return Material.TROPICAL_FISH;
+        return Material.PUFFERFISH;
     }
 
     private FishDefinition chooseSpecies(Map<String, Integer> pool) {
