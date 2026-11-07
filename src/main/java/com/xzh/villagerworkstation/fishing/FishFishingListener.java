@@ -120,10 +120,18 @@ public final class FishFishingListener implements Listener {
         Material caughtType = caughtStack.getType();
         FishDefinition definition;
 
+        // Nether fishing deliberately excludes tropical fish. If the datapack's
+        // vanilla loot produces one, normalize it to the Nether vanilla pool.
+        if (caughtType == Material.TROPICAL_FISH) {
+            caughtStack = new ItemStack(chooseVanillaFish());
+            entity.setItemStack(caughtStack);
+            caughtType = caughtStack.getType();
+        }
+
         if (isVanillaFish(caughtType)) {
             if (!passesCustomFishRoll()) {
                 activeNetherHooks.remove(match.hookId);
-                return;
+                return; // Keep the original vanilla catch.
             }
             definition = chooseSpecies(FishHabitatPools.NETHER_LAVA);
         } else {
@@ -229,15 +237,14 @@ public final class FishFishingListener implements Listener {
 
     private boolean isVanillaFish(Material material) {
         return material == Material.COD || material == Material.SALMON
-                || material == Material.TROPICAL_FISH || material == Material.PUFFERFISH;
+                || material == Material.PUFFERFISH;
     }
 
-    /** Uses the same vanilla catch distribution documented for Overworld fishing. */
+    /** Nether vanilla pool: cod, salmon and pufferfish only; tropical fish are excluded. */
     private Material chooseVanillaFish() {
         int roll = ThreadLocalRandom.current().nextInt(100);
         if (roll < 60) return Material.COD;
         if (roll < 90) return Material.SALMON;
-        if (roll < 96) return Material.TROPICAL_FISH;
         return Material.PUFFERFISH;
     }
 
