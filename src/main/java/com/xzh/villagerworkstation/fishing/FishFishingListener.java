@@ -1,9 +1,11 @@
 package com.xzh.villagerworkstation.fishing;
 
 import org.bukkit.ChatColor;
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.World;
+import org.bukkit.entity.FishHook;
 import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -11,20 +13,37 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.ItemSpawnEvent;
 import org.bukkit.event.player.PlayerFishEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.scheduler.BukkitTask;
 
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
-/** Adds XZH specimens without replacing vanilla water-fishing behavior. */
+/** Adds XZH specimens without replacing vanilla water- or lava-fishing behavior. */
 public final class FishFishingListener implements Listener {
+    private static final double NETHER_CATCH_RADIUS_SQUARED = 64.0;
+    /** Keep a cast eligible briefly after Paper invalidates/retracts its hook. */
+    private static final long RETRACTED_HOOK_GRACE_TICKS = 100L;
+
     private final JavaPlugin plugin;
     private final FishRegistry registry;
     private final FishItemFactory itemFactory;
     private final FishCollectionManager collectionManager;
     private final FishGenerator generator = new FishGenerator();
+
+    /**
+     * A cast is keyed by its actual hook UUID. Last location is refreshed while
+     * the hook is valid, then retained for a short grace period after retraction.
+     */
+    private final Map<UUID, HookTrack> activeNetherHooks = new HashMap<>();
+    private long serverTick;
+    private final BukkitTask hookTrackingTask;
 
     public FishFishingListener(JavaPlugin plugin, FishRegistry registry, FishItemFactory itemFactory,
                                FishCollectionManager collectionManager) {
@@ -32,42 +51,55 @@ public final class FishFishingListener implements Listener {
         this.registry = registry;
         this.itemFactory = itemFactory;
         this.collectionManager = collectionManager;
+        this.hookTrackingTask = plugin.getServer().getScheduler()
+                .runTaskTimer(plugin, this::refreshHookTracks, 1L, 1L);
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onPlayerFish(PlayerFishEvent event) {
-        if (!plugin.getConfig().getBoolean("custom-fishing.enabled", true)) return;
+        Player player = event.getPlayer();
 
         if (event.getState() == PlayerFishEvent.State.FISHING
-                && event.getPlayer().getWorld().getEnvironment() == World.Environment.NETHER
-                && !isNetheriteRod(event.getPlayer().getInventory().getItemInMainHand())) {
-            event.setCancelled(true);
-            event.getHook().remove();
-            event.getPlayer().sendMessage(ChatColor.RED + "Only the Netherite Fishing Rod works in the Nether.");
+                && player.getWorld().getEnvironment() == World.Environment.NETHER) {
+            if (!isNetheriteRod(player.getInventory().getItemInMainHand())) {
+                event.setCancelled(true);
+                event.getHook().remove();
+                activeNetherHooks.remove(event.getHook().getUniqueId());
+                player.sendMessage(ChatColor.RED + "Only the Netherite Fishing Rod works in the Nether.");
+                return;
+            }
+
+            FishHook hook = event.getHook();
+            activeNetherHooks.put(hook.getUniqueId(), new HookTrack(
+                    player.getUniqueId(), player.getWorld().getUID(), hook.getLocation().clone(),
+                    serverTick, Long.MAX_VALUE));
             return;
         }
 
+        if (!plugin.getConfig().getBoolean("custom-fishing.enabled", true)) return;
         if (event.getState() != PlayerFishEvent.State.CAUGHT_FISH
                 || !(event.getCaught() instanceof Item caughtEntity)) return;
 
         Material caughtType = caughtEntity.getItemStack().getType();
-        if (caughtType != Material.COD && caughtType != Material.SALMON
-                && caughtType != Material.TROPICAL_FISH && caughtType != Material.PUFFERFISH) return;
-        if (event.getPlayer().getWorld().getEnvironment() == World.Environment.NETHER) return;
+        if (!isVanillaFish(caughtType)) return;
 
-        int chance = Math.max(0, Math.min(100,
-                plugin.getConfig().getInt("custom-fishing.chance-percent", 20)));
-        if (ThreadLocalRandom.current().nextInt(100) >= chance) return;
+        // The Overworld conversion path remains unchanged. Nether lava catches are
+        // handled by ItemSpawnEvent because the datapack creates those item entities.
+        if (player.getWorld().getEnvironment() == World.Environment.NETHER) return;
 
-        Map<String, Integer> pool = FishHabitatPools.forBiome(event.getHook().getLocation().getBlock().getBiome());
+        if (!passesCustomFishRoll()) return;
+
+        Map<String, Integer> pool = FishHabitatPools.forBiome(
+                event.getHook().getLocation().getBlock().getBiome());
         FishDefinition definition = chooseSpecies(pool);
         if (definition == null) return;
-        replaceWithSpecimen(event.getPlayer(), caughtEntity, definition);
+        replaceWithSpecimen(player, caughtEntity, definition);
     }
 
     /**
-     * The AllTheFish datapack runs Nether lava fishing through loot-spawn functions,
-     * not PlayerFishEvent. Convert only the two XZH Nether-exclusive item models here.
+     * The datapack creates Nether-lava catches as item entities. Match the item
+     * against a recently tracked hook cast by a player using the required rod.
+     * The hook's last known position remains available briefly after retraction.
      */
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onLavaFishSpawn(ItemSpawnEvent event) {
@@ -75,40 +107,138 @@ public final class FishFishingListener implements Listener {
         if (entity.getWorld().getEnvironment() != World.Environment.NETHER
                 || !plugin.getConfig().getBoolean("custom-fishing.enabled", true)) return;
 
-        ItemMeta meta = entity.getItemStack().getItemMeta();
-        NamespacedKey model = meta == null ? null : meta.getItemModel();
-        if (model == null || !model.getNamespace().equals("barely_default")) return;
-        String modelName = model.getKey();
-        if (!modelName.startsWith("fish_")) return;
-        String fishId = modelName.substring("fish_".length());
-        if (!fishId.equals("netherwrasse") && !fishId.equals("volcanic_bass")) return;
+        HookMatch match = findNetherAngler(entity);
+        if (match == null) return;
 
-        Player owner = entity.getWorld().getPlayers().stream()
-                .filter(player -> player.getLocation().distanceSquared(entity.getLocation()) <= 100.0)
-                .filter(player -> isNetheriteRod(player.getInventory().getItemInMainHand()))
-                .min((a, b) -> Double.compare(a.getLocation().distanceSquared(entity.getLocation()),
-                        b.getLocation().distanceSquared(entity.getLocation())))
-                .orElse(null);
-        if (owner == null) return;
-
-        int chance = Math.max(0, Math.min(100,
-                plugin.getConfig().getInt("custom-fishing.chance-percent", 20)));
-        if (ThreadLocalRandom.current().nextInt(100) >= chance) {
-            event.setCancelled(true);
+        Player owner = plugin.getServer().getPlayer(match.track.playerId);
+        if (owner == null || !owner.isOnline()) {
+            activeNetherHooks.remove(match.hookId);
             return;
         }
 
-        FishDefinition definition = registry.get(fishId);
+        ItemStack caughtStack = entity.getItemStack();
+        Material caughtType = caughtStack.getType();
+        FishDefinition definition;
+
+        if (isVanillaFish(caughtType)) {
+            if (!passesCustomFishRoll()) {
+                activeNetherHooks.remove(match.hookId);
+                return;
+            }
+            definition = chooseSpecies(FishHabitatPools.NETHER_LAVA);
+        } else {
+            String fishId = getDatapackFishId(caughtStack);
+            if (fishId == null) return;
+
+            definition = registry.get(fishId);
+            if (definition == null) {
+                plugin.getLogger().warning("Datapack spawned an unregistered XZH fish: " + fishId
+                        + "; preserving the original catch.");
+                return;
+            }
+            if (!passesCustomFishRoll()) {
+                entity.setItemStack(new ItemStack(chooseVanillaFish()));
+                activeNetherHooks.remove(match.hookId);
+                return;
+            }
+        }
+
         if (definition == null) {
-            event.setCancelled(true);
-            plugin.getLogger().warning("Datapack spawned an unregistered XZH fish: " + fishId);
+            activeNetherHooks.remove(match.hookId);
             return;
         }
 
+        activeNetherHooks.remove(match.hookId);
         FishInstance specimen = generator.generate(definition);
         entity.setItemStack(itemFactory.create(definition, specimen));
         collectionManager.recordCatch(owner.getUniqueId(), definition, specimen);
         sendCatchMessage(owner, definition, specimen);
+    }
+
+    @EventHandler
+    public void onPlayerQuit(PlayerQuitEvent event) {
+        UUID playerId = event.getPlayer().getUniqueId();
+        activeNetherHooks.entrySet().removeIf(entry -> entry.getValue().playerId.equals(playerId));
+    }
+
+    private void refreshHookTracks() {
+        serverTick++;
+        Iterator<Map.Entry<UUID, HookTrack>> iterator = activeNetherHooks.entrySet().iterator();
+        while (iterator.hasNext()) {
+            Map.Entry<UUID, HookTrack> entry = iterator.next();
+            HookTrack track = entry.getValue();
+            Player player = plugin.getServer().getPlayer(track.playerId);
+            if (player == null || !player.isOnline()) {
+                iterator.remove();
+                continue;
+            }
+
+            FishHook hook = player.getFishHook();
+            if (hook != null && hook.isValid() && hook.getUniqueId().equals(entry.getKey())
+                    && hook.getWorld().getUID().equals(track.worldId)) {
+                track.lastLocation = hook.getLocation().clone();
+                track.lastSeenTick = serverTick;
+                track.expiresAtTick = Long.MAX_VALUE;
+            } else if (track.expiresAtTick == Long.MAX_VALUE) {
+                track.expiresAtTick = track.lastSeenTick + RETRACTED_HOOK_GRACE_TICKS;
+            }
+
+            if (track.expiresAtTick != Long.MAX_VALUE && serverTick > track.expiresAtTick) {
+                iterator.remove();
+            }
+        }
+    }
+
+    private HookMatch findNetherAngler(Item item) {
+        HookMatch nearest = null;
+        double nearestDistance = NETHER_CATCH_RADIUS_SQUARED;
+        Location itemLocation = item.getLocation();
+
+        for (Map.Entry<UUID, HookTrack> entry : activeNetherHooks.entrySet()) {
+            HookTrack track = entry.getValue();
+            if (!track.worldId.equals(item.getWorld().getUID())) continue;
+            if (serverTick > track.expiresAtTick) continue;
+
+            double distance = track.lastLocation.distanceSquared(itemLocation);
+            if (distance <= nearestDistance) {
+                nearestDistance = distance;
+                nearest = new HookMatch(entry.getKey(), track);
+            }
+        }
+        return nearest;
+    }
+
+    private String getDatapackFishId(ItemStack stack) {
+        ItemMeta meta = stack.getItemMeta();
+        NamespacedKey model = meta == null ? null : meta.getItemModel();
+        if (model == null || !model.getNamespace().equals("barely_default")) return null;
+
+        String modelName = model.getKey();
+        if (!modelName.startsWith("fish_")) return null;
+
+        String fishId = modelName.substring("fish_".length());
+        return fishId.equals("netherwrasse") || fishId.equals("volcanic_bass")
+                ? fishId : null;
+    }
+
+    private boolean passesCustomFishRoll() {
+        int chance = Math.max(0, Math.min(100,
+                plugin.getConfig().getInt("custom-fishing.chance-percent", 20)));
+        return ThreadLocalRandom.current().nextInt(100) < chance;
+    }
+
+    private boolean isVanillaFish(Material material) {
+        return material == Material.COD || material == Material.SALMON
+                || material == Material.TROPICAL_FISH || material == Material.PUFFERFISH;
+    }
+
+    /** Uses the same vanilla catch distribution documented for Overworld fishing. */
+    private Material chooseVanillaFish() {
+        int roll = ThreadLocalRandom.current().nextInt(100);
+        if (roll < 60) return Material.COD;
+        if (roll < 90) return Material.SALMON;
+        if (roll < 96) return Material.TROPICAL_FISH;
+        return Material.PUFFERFISH;
     }
 
     private FishDefinition chooseSpecies(Map<String, Integer> pool) {
@@ -144,7 +274,35 @@ public final class FishFishingListener implements Listener {
     private boolean isNetheriteRod(ItemStack item) {
         if (item == null || item.getType() != Material.FISHING_ROD) return false;
         ItemMeta meta = item.getItemMeta();
-        return meta != null && meta.hasItemName()
-                && "Netherite Fishing Rod".equalsIgnoreCase(meta.getItemName());
+        if (meta == null) return false;
+
+        return matchesRodName(meta.hasItemName() ? meta.getItemName() : null)
+                || matchesRodName(meta.hasDisplayName() ? meta.getDisplayName() : null);
     }
+
+    private boolean matchesRodName(String name) {
+        if (name == null) return false;
+        String plainName = ChatColor.stripColor(name);
+        return plainName != null
+                && plainName.trim().equalsIgnoreCase("Netherite Fishing Rod");
+    }
+
+    private static final class HookTrack {
+        private final UUID playerId;
+        private final UUID worldId;
+        private Location lastLocation;
+        private long lastSeenTick;
+        private long expiresAtTick;
+
+        private HookTrack(UUID playerId, UUID worldId, Location lastLocation,
+                          long lastSeenTick, long expiresAtTick) {
+            this.playerId = playerId;
+            this.worldId = worldId;
+            this.lastLocation = lastLocation;
+            this.lastSeenTick = lastSeenTick;
+            this.expiresAtTick = expiresAtTick;
+        }
+    }
+
+    private record HookMatch(UUID hookId, HookTrack track) {}
 }
