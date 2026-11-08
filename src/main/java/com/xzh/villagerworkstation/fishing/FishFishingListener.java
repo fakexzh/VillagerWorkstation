@@ -229,6 +229,14 @@ public final class FishFishingListener implements Listener {
         if (!modelName.startsWith("fish_")) return null;
 
         String fishId = modelName.substring("fish_".length());
+        // Datapack and plugin-generated specimen models may append a physical
+        // size suffix. Strip it before validating the two Nether species.
+        for (String size : new String[]{"_small", "_medium", "_large", "_giant"}) {
+            if (fishId.endsWith(size)) {
+                fishId = fishId.substring(0, fishId.length() - size.length());
+                break;
+            }
+        }
         return fishId.equals("netherwrasse") || fishId.equals("volcanic_bass")
                 ? fishId : null;
     }
