@@ -107,6 +107,28 @@ public final class FishFishingListener implements Listener {
         if (entity.getWorld().getEnvironment() != World.Environment.NETHER
                 || !plugin.getConfig().getBoolean("custom-fishing.enabled", true)) return;
 
+        ItemStack caughtStack = entity.getItemStack();
+        Material caughtType = caughtStack.getType();
+
+        // Tropical fish are never part of the Nether catch pool. Normalize them
+        // even when hook tracking has already expired or cannot be matched.
+        if (caughtType == Material.TROPICAL_FISH) {
+            caughtStack = new ItemStack(chooseVanillaFish());
+            entity.setItemStack(caughtStack);
+            caughtType = caughtStack.getType();
+        }
+
+        String datapackFishId = getDatapackFishId(caughtStack);
+        if (datapackFishId != null && !passesCustomFishRoll()) {
+            // Apply the configured 20% custom-fish chance to datapack fish before
+            // requiring a hook match. Otherwise unmatched item spawns bypassed
+            // the vanilla fallback and every datapack catch stayed custom.
+            entity.setItemStack(new ItemStack(chooseVanillaFish()));
+            HookMatch failedRollMatch = findNetherAngler(entity);
+            if (failedRollMatch != null) activeNetherHooks.remove(failedRollMatch.hookId);
+            return;
+        }
+
         HookMatch match = findNetherAngler(entity);
         if (match == null) return;
 
@@ -116,18 +138,7 @@ public final class FishFishingListener implements Listener {
             return;
         }
 
-        ItemStack caughtStack = entity.getItemStack();
-        Material caughtType = caughtStack.getType();
         FishDefinition definition;
-
-        // Nether fishing deliberately excludes tropical fish. If the datapack's
-        // vanilla loot produces one, normalize it to the Nether vanilla pool.
-        if (caughtType == Material.TROPICAL_FISH) {
-            caughtStack = new ItemStack(chooseVanillaFish());
-            entity.setItemStack(caughtStack);
-            caughtType = caughtStack.getType();
-        }
-
         if (isVanillaFish(caughtType)) {
             if (!passesCustomFishRoll()) {
                 activeNetherHooks.remove(match.hookId);
@@ -135,18 +146,11 @@ public final class FishFishingListener implements Listener {
             }
             definition = chooseSpecies(FishHabitatPools.NETHER_LAVA);
         } else {
-            String fishId = getDatapackFishId(caughtStack);
-            if (fishId == null) return;
-
-            definition = registry.get(fishId);
+            if (datapackFishId == null) return;
+            definition = registry.get(datapackFishId);
             if (definition == null) {
-                plugin.getLogger().warning("Datapack spawned an unregistered XZH fish: " + fishId
+                plugin.getLogger().warning("Datapack spawned an unregistered XZH fish: " + datapackFishId
                         + "; preserving the original catch.");
-                return;
-            }
-            if (!passesCustomFishRoll()) {
-                entity.setItemStack(new ItemStack(chooseVanillaFish()));
-                activeNetherHooks.remove(match.hookId);
                 return;
             }
         }
