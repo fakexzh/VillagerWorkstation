@@ -107,6 +107,8 @@ public final class FishFishingListener implements Listener {
         if (entity.getWorld().getEnvironment() != World.Environment.NETHER
                 || !plugin.getConfig().getBoolean("custom-fishing.enabled", true)) return;
 
+        // Only process actual catch items associated with a tracked Nether cast.
+        // This avoids changing custom fish players simply drop in the Nether.
         HookMatch match = findNetherAngler(entity);
         if (match == null) return;
 
@@ -135,6 +137,8 @@ public final class FishFishingListener implements Listener {
             }
             definition = chooseSpecies(FishHabitatPools.NETHER_LAVA);
         } else {
+            // The datapack may append _small/_medium/_large/_giant to the
+            // custom model ID. getDatapackFishId strips that suffix before lookup.
             String fishId = getDatapackFishId(caughtStack);
             if (fishId == null) return;
 
@@ -225,6 +229,14 @@ public final class FishFishingListener implements Listener {
         if (!modelName.startsWith("fish_")) return null;
 
         String fishId = modelName.substring("fish_".length());
+        // Datapack and plugin-generated specimen models may append a physical
+        // size suffix. Strip it before validating the two Nether species.
+        for (String size : new String[]{"_small", "_medium", "_large", "_giant"}) {
+            if (fishId.endsWith(size)) {
+                fishId = fishId.substring(0, fishId.length() - size.length());
+                break;
+            }
+        }
         return fishId.equals("netherwrasse") || fishId.equals("volcanic_bass")
                 ? fishId : null;
     }
