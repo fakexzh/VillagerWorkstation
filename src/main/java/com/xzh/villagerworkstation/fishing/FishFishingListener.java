@@ -89,12 +89,10 @@ public final class FishFishingListener implements Listener {
         // handled by ItemSpawnEvent because the datapack creates those item entities.
         if (player.getWorld().getEnvironment() == World.Environment.NETHER) return;
 
-        if (!passesCustomFishRoll()) return;
-
         Map<String, Integer> pool = FishHabitatPools.forBiome(
                 event.getHook().getLocation().getBlock().getBiome());
-        FishDefinition definition = chooseSpecies(pool);
-        if (definition == null) return;
+        FishDefinition definition = rollSpeciesByRarity(pool);
+        if (definition == null) return; // No XZH species rolled: preserve the vanilla catch.
         replaceWithSpecimen(player, caughtEntity, definition);
     }
 
@@ -135,24 +133,28 @@ public final class FishFishingListener implements Listener {
         }
 
         if (isVanillaFish(caughtType)) {
-            if (!passesCustomFishRoll()) {
+            definition = rollSpeciesByRarity(FishHabitatPools.NETHER_LAVA);
+            if (definition == null) {
                 activeNetherHooks.remove(match.hookId);
                 return; // Keep the original vanilla catch.
             }
-            definition = chooseSpecies(FishHabitatPools.NETHER_LAVA);
         } else {
             // The datapack may append _small/_medium/_large/_giant to the
             // custom model ID. getDatapackFishId strips that suffix before lookup.
             String fishId = getDatapackFishId(caughtStack);
             if (fishId == null) return;
 
-            definition = registry.get(fishId);
-            if (definition == null) {
+            FishDefinition datapackDefinition = registry.get(fishId);
+            if (datapackDefinition == null) {
                 plugin.getLogger().warning("Datapack spawned an unregistered XZH fish: " + fishId
                         + "; preserving the original catch.");
                 return;
             }
-            if (!passesCustomFishRoll()) {
+            // Use the same per-species overall odds as Overworld fishing. The
+            // datapack's selected custom item is only the catch signal; the
+            // rarity roll decides whether and which Nether specimen is awarded.
+            definition = rollSpeciesByRarity(FishHabitatPools.NETHER_LAVA);
+            if (definition == null) {
                 entity.setItemStack(new ItemStack(chooseVanillaFish()));
                 activeNetherHooks.remove(match.hookId);
                 return;
@@ -264,10 +266,22 @@ public final class FishFishingListener implements Listener {
                 .has(specimenIdKey, org.bukkit.persistence.PersistentDataType.STRING);
     }
 
-    private boolean passesCustomFishRoll() {
-        int chance = Math.max(0, Math.min(100,
-                plugin.getConfig().getInt("custom-fishing.chance-percent", 5)));
-        return ThreadLocalRandom.current().nextInt(100) < chance;
+    /**
+     * Rolls each species at its rarity's absolute overall catch probability.
+     * Pool weights are intentionally not normalized: the unused probability
+     * remains a vanilla catch. All current habitat pools total less than 100%.
+     */
+    private FishDefinition rollSpeciesByRarity(Map<String, Integer> pool) {
+        if (pool == null || pool.isEmpty()) return null;
+        double roll = ThreadLocalRandom.current().nextDouble(100.0);
+        double cumulativeChance = 0.0;
+        for (String fishId : pool.keySet()) {
+            FishDefinition candidate = registry.get(fishId);
+            if (candidate == null) continue;
+            cumulativeChance += candidate.rarity().catchChancePercent();
+            if (roll < cumulativeChance) return candidate;
+        }
+        return null;
     }
 
     private boolean isVanillaFish(Material material) {
@@ -281,17 +295,6 @@ public final class FishFishingListener implements Listener {
         if (roll < 60) return Material.COD;
         if (roll < 90) return Material.SALMON;
         return Material.PUFFERFISH;
-    }
-
-    private FishDefinition chooseSpecies(Map<String, Integer> pool) {
-        int total = pool.values().stream().mapToInt(Integer::intValue).sum();
-        if (total <= 0) return null;
-        int roll = ThreadLocalRandom.current().nextInt(total);
-        for (Map.Entry<String, Integer> entry : pool.entrySet()) {
-            roll -= entry.getValue();
-            if (roll < 0) return registry.get(entry.getKey());
-        }
-        return null;
     }
 
     private void replaceWithSpecimen(Player player, Item caughtEntity, FishDefinition definition) {

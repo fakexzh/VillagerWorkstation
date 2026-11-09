@@ -17,13 +17,13 @@ farmer-max-items-per-crop-per-hour: 48
 fisherman-fishing-enabled: true
 fisherman-max-fish-per-hour: 48
 
-# Only 5% of eligible catches become XZH specimens.
-# The other 95% remain vanilla fish; vanilla catches are never deleted on a failed roll.
+# Absolute overall catch chances per eligible fishing catch, determined by fish rarity:
+# Common 10%, Uncommon 6%, Rare 3%, Epic 2%, Legendary 1%, Mythical 0.5%.
+# Species odds are not normalized within a biome; unused probability remains vanilla fish.
 # This applies to eligible Overworld water catches and Nether lava/datapack catches.
 # Junk and treasure are never replaced. Only genuine custom catches enter fish-collections.yml.
 custom-fishing:
   enabled: true
-  chance-percent: 5
   fish-catalogue: fish.yml
   consume-bait-on-success-only: true
   specimen-identity: true
