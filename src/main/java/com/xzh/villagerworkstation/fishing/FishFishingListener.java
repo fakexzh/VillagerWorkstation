@@ -108,6 +108,8 @@ public final class FishFishingListener implements Listener {
         Item entity = event.getEntity();
         if (entity.getWorld().getEnvironment() != World.Environment.NETHER
                 || !plugin.getConfig().getBoolean("custom-fishing.enabled", true)) return;
+        // Never re-roll an existing specimen that is merely being dropped in lava.
+        if (hasSpecimenMetadata(entity.getItemStack())) return;
 
         HookMatch match = findNetherAngler(entity);
         if (match == null) return;
