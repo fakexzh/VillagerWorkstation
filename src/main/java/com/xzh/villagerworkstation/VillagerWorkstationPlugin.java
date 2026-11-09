@@ -58,6 +58,13 @@ public final class VillagerWorkstationPlugin extends JavaPlugin implements Liste
     @Override
     public void onEnable() {
         saveDefaultConfig();
+        // Migrate the previous bundled defaults so existing installations also
+        // receive the requested 5% custom-fish chance without resetting other settings.
+        int previousChance = getConfig().getInt("custom-fishing.chance-percent", 20);
+        if (previousChance == 20 || previousChance == 25) {
+            getConfig().set("custom-fishing.chance-percent", 5);
+            saveConfig();
+        }
         loadWorkstations();
         loadProductionWindows();
         fishRegistry.load(this);
