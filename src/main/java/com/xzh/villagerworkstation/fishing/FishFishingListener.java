@@ -28,6 +28,8 @@ import java.util.concurrent.ThreadLocalRandom;
 /** Adds XZH specimens without replacing vanilla water- or lava-fishing behavior. */
 public final class FishFishingListener implements Listener {
     private static final double NETHER_CATCH_RADIUS_SQUARED = 64.0;
+    /** Fixed share of eligible fish catches reserved for XZH custom specimens. */
+    private static final double CUSTOM_FISH_CHANCE_PERCENT = 5.0;
     /** Keep a cast eligible briefly after Paper invalidates/retracts its hook. */
     private static final long RETRACTED_HOOK_GRACE_TICKS = 100L;
 
@@ -267,19 +269,35 @@ public final class FishFishingListener implements Listener {
     }
 
     /**
-     * Rolls each species at its rarity's absolute overall catch probability.
-     * Pool weights are intentionally not normalized: the unused probability
-     * remains a vanilla catch. All current habitat pools total less than 100%.
+     * First reserves exactly 5% of eligible fish catches for XZH specimens.
+     * The remaining 95% stays vanilla. Inside that fixed custom pool, species
+     * are selected by habitat weight multiplied by rarity weight. No fishing
+     * enchantment is read here, so Luck of the Sea cannot alter this split.
      */
     private FishDefinition rollSpeciesByRarity(Map<String, Integer> pool) {
         if (pool == null || pool.isEmpty()) return null;
-        double roll = ThreadLocalRandom.current().nextDouble(100.0);
-        double cumulativeChance = 0.0;
-        for (String fishId : pool.keySet()) {
-            FishDefinition candidate = registry.get(fishId);
-            if (candidate == null) continue;
-            cumulativeChance += candidate.rarity().catchChancePercent();
-            if (roll < cumulativeChance) return candidate;
+
+        // This independent gate is the complete vanilla/custom probability split.
+        if (ThreadLocalRandom.current().nextDouble(100.0) >= CUSTOM_FISH_CHANCE_PERCENT) {
+            return null;
+        }
+
+        double totalWeight = 0.0;
+        for (Map.Entry<String, Integer> entry : pool.entrySet()) {
+            FishDefinition candidate = registry.get(entry.getKey());
+            int habitatWeight = Math.max(0, entry.getValue());
+            if (candidate == null || habitatWeight == 0) continue;
+            totalWeight += habitatWeight * candidate.rarity().catchWeight();
+        }
+        if (totalWeight <= 0.0) return null;
+
+        double speciesRoll = ThreadLocalRandom.current().nextDouble(totalWeight);
+        for (Map.Entry<String, Integer> entry : pool.entrySet()) {
+            FishDefinition candidate = registry.get(entry.getKey());
+            int habitatWeight = Math.max(0, entry.getValue());
+            if (candidate == null || habitatWeight == 0) continue;
+            speciesRoll -= habitatWeight * candidate.rarity().catchWeight();
+            if (speciesRoll < 0.0) return candidate;
         }
         return null;
     }
