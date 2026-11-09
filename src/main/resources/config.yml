@@ -17,9 +17,10 @@ farmer-max-items-per-crop-per-hour: 48
 fisherman-fishing-enabled: true
 fisherman-max-fish-per-hour: 48
 
-# Absolute overall catch chances per eligible fishing catch, determined by fish rarity:
-# Common 10%, Uncommon 6%, Rare 3%, Epic 2%, Legendary 1%, Mythical 0.5%.
-# Species odds are not normalized within a biome; unused probability remains vanilla fish.
+# Fixed probability split for eligible fish catches: 95% vanilla fish / 5% XZH custom fish.
+# Luck of the Sea and other fishing enchantments do not modify this plugin-controlled split.
+# Inside the 5% custom pool, rarity values are relative weights (Common 10, Uncommon 6,
+# Rare 3, Epic 2, Legendary 1, Mythical 0.5), combined with each biome's habitat weights.
 # This applies to eligible Overworld water catches and Nether lava/datapack catches.
 # Junk and treasure are never replaced. Only genuine custom catches enter fish-collections.yml.
 custom-fishing:
