@@ -36,6 +36,7 @@ public final class FishFishingListener implements Listener {
     private final FishItemFactory itemFactory;
     private final FishCollectionManager collectionManager;
     private final FishGenerator generator = new FishGenerator();
+    private final NamespacedKey specimenIdKey;
 
     /**
      * A cast is keyed by its actual hook UUID. Last location is refreshed while
@@ -51,6 +52,7 @@ public final class FishFishingListener implements Listener {
         this.registry = registry;
         this.itemFactory = itemFactory;
         this.collectionManager = collectionManager;
+        this.specimenIdKey = new NamespacedKey(plugin, "fish_uuid");
         this.hookTrackingTask = plugin.getServer().getScheduler()
                 .runTaskTimer(plugin, this::refreshHookTracks, 1L, 1L);
     }
@@ -106,6 +108,8 @@ public final class FishFishingListener implements Listener {
         Item entity = event.getEntity();
         if (entity.getWorld().getEnvironment() != World.Environment.NETHER
                 || !plugin.getConfig().getBoolean("custom-fishing.enabled", true)) return;
+        // A tagged specimen being dropped is not a new fishing catch.
+        if (hasSpecimenMetadata(entity.getItemStack())) return;
 
         // Only process actual catch items associated with a tracked Nether cast.
         // This avoids changing custom fish players simply drop in the Nether.
@@ -202,8 +206,10 @@ public final class FishFishingListener implements Listener {
     }
 
     private HookMatch findNetherAngler(Item item) {
-        HookMatch nearest = null;
-        double nearestDistance = NETHER_CATCH_RADIUS_SQUARED;
+        HookMatch nearestByPlayer = null;
+        double nearestPlayerDistance = 16.0; // Catch datapacks often spawn the item beside the angler.
+        HookMatch nearestByHook = null;
+        double nearestHookDistance = NETHER_CATCH_RADIUS_SQUARED;
         Location itemLocation = item.getLocation();
 
         for (Map.Entry<UUID, HookTrack> entry : activeNetherHooks.entrySet()) {
@@ -211,13 +217,24 @@ public final class FishFishingListener implements Listener {
             if (!track.worldId.equals(item.getWorld().getUID())) continue;
             if (serverTick > track.expiresAtTick) continue;
 
-            double distance = track.lastLocation.distanceSquared(itemLocation);
-            if (distance <= nearestDistance) {
-                nearestDistance = distance;
-                nearest = new HookMatch(entry.getKey(), track);
+            Player owner = plugin.getServer().getPlayer(track.playerId);
+            if (owner == null || !owner.isOnline()
+                    || !owner.getWorld().getUID().equals(track.worldId)) continue;
+
+            double playerDistance = owner.getLocation().distanceSquared(itemLocation);
+            if (playerDistance <= nearestPlayerDistance) {
+                nearestPlayerDistance = playerDistance;
+                nearestByPlayer = new HookMatch(entry.getKey(), track);
+            }
+
+            double hookDistance = track.lastLocation.distanceSquared(itemLocation);
+            if (hookDistance <= nearestHookDistance) {
+                nearestHookDistance = hookDistance;
+                nearestByHook = new HookMatch(entry.getKey(), track);
             }
         }
-        return nearest;
+        // Prefer an item spawned at the angler; otherwise use the tracked bobber.
+        return nearestByPlayer != null ? nearestByPlayer : nearestByHook;
     }
 
     private String getDatapackFishId(ItemStack stack) {
@@ -241,9 +258,15 @@ public final class FishFishingListener implements Listener {
                 ? fishId : null;
     }
 
+    private boolean hasSpecimenMetadata(ItemStack stack) {
+        return stack != null && stack.hasItemMeta()
+                && stack.getItemMeta().getPersistentDataContainer()
+                .has(specimenIdKey, org.bukkit.persistence.PersistentDataType.STRING);
+    }
+
     private boolean passesCustomFishRoll() {
         int chance = Math.max(0, Math.min(100,
-                plugin.getConfig().getInt("custom-fishing.chance-percent", 20)));
+                plugin.getConfig().getInt("custom-fishing.chance-percent", 5)));
         return ThreadLocalRandom.current().nextInt(100) < chance;
     }
 

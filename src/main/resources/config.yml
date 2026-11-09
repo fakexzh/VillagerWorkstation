@@ -17,14 +17,13 @@ farmer-max-items-per-crop-per-hour: 48
 fisherman-fishing-enabled: true
 fisherman-max-fish-per-hour: 48
 
-# A 20% roll converts a successful vanilla fish catch into an XZH specimen.
-# The other 80% remain vanilla cod, salmon, tropical fish or pufferfish.
-# This applies in Overworld water and Nether lava; vanilla catches are never deleted.
-# Junk and treasure are never replaced. Datapack Nether fish use the same conversion chance.
-# Only genuine custom catches are written to fish-collections.yml.
+# Only 5% of eligible catches become XZH specimens.
+# The other 95% remain vanilla fish; vanilla catches are never deleted on a failed roll.
+# This applies to eligible Overworld water catches and Nether lava/datapack catches.
+# Junk and treasure are never replaced. Only genuine custom catches enter fish-collections.yml.
 custom-fishing:
   enabled: true
-  chance-percent: 20
+  chance-percent: 5
   fish-catalogue: fish.yml
   consume-bait-on-success-only: true
   specimen-identity: true
