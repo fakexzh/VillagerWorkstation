@@ -266,7 +266,7 @@ public final class FishFishingListener implements Listener {
 
     private boolean passesCustomFishRoll() {
         int chance = Math.max(0, Math.min(100,
-                plugin.getConfig().getInt("custom-fishing.chance-percent", 20)));
+                plugin.getConfig().getInt("custom-fishing.chance-percent", 5)));
         return ThreadLocalRandom.current().nextInt(100) < chance;
     }
 
