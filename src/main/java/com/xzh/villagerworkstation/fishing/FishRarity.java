@@ -1,11 +1,14 @@
 package com.xzh.villagerworkstation.fishing;
 
-/** Ordered fish rarity tiers used for display and valuation. */
+/** Ordered fish rarity tiers used for display, valuation and custom catch weighting. */
 public enum FishRarity {
     COMMON, UNCOMMON, RARE, EPIC, LEGENDARY, MYTHICAL;
 
-    /** Absolute overall chance per eligible fishing catch, in percentage points. */
-    public double catchChancePercent() {
+    /**
+     * Relative selection weight inside the fixed 5% custom-fish pool.
+     * This is not an absolute catch percentage.
+     */
+    public double catchWeight() {
         return switch (this) {
             case COMMON -> 10.0;
             case UNCOMMON -> 6.0;
