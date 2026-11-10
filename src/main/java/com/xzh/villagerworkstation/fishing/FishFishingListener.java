@@ -22,6 +22,7 @@ import org.bukkit.scheduler.BukkitTask;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -30,6 +31,14 @@ public final class FishFishingListener implements Listener {
     private static final double NETHER_CATCH_RADIUS_SQUARED = 64.0;
     /** Fixed share of eligible fish catches reserved for XZH custom specimens. */
     private static final double CUSTOM_FISH_CHANCE_PERCENT = 5.0;
+    private static final Set<String> FISH_SHOP_CATALOGUE_IDS = Set.of(
+            "alpha_spiderfish", "catfish", "deadly_fin", "flarefin_koi", "king_of_the_pond",
+            "ocean_sunfish", "rabbitfish", "seven_finned_death", "oarfish", "wyverntail",
+            "princess_fish", "red_snapper", "mystery_fish", "arowana", "the_sounding",
+            "the_beastfish", "tropical_barracuda", "saddled_bichir", "netherwrasse",
+            "olive_flounder", "sturgeon", "pain_eel", "dorado", "eel", "touchy_fish",
+            "moray_eel", "rusty_marlin", "football_fish", "unicorn_fish", "volcanic_bass",
+            "laviathan_fry");
     /** Keep a cast eligible briefly after Paper invalidates/retracts its hook. */
     private static final long RETRACTED_HOOK_GRACE_TICKS = 100L;
 
@@ -144,7 +153,7 @@ public final class FishFishingListener implements Listener {
             // The datapack may append _small/_medium/_large/_giant to the
             // custom model ID. getDatapackFishId strips that suffix before lookup.
             String fishId = getDatapackFishId(caughtStack);
-            if (fishId == null) return;
+            if (fishId == null || !FISH_SHOP_CATALOGUE_IDS.contains(fishId)) return;
 
             FishDefinition datapackDefinition = registry.get(fishId);
             if (datapackDefinition == null) {
@@ -284,6 +293,7 @@ public final class FishFishingListener implements Listener {
 
         double totalWeight = 0.0;
         for (Map.Entry<String, Integer> entry : pool.entrySet()) {
+            if (!FISH_SHOP_CATALOGUE_IDS.contains(entry.getKey())) continue;
             FishDefinition candidate = registry.get(entry.getKey());
             int habitatWeight = Math.max(0, entry.getValue());
             if (candidate == null || habitatWeight == 0) continue;
@@ -293,6 +303,7 @@ public final class FishFishingListener implements Listener {
 
         double speciesRoll = ThreadLocalRandom.current().nextDouble(totalWeight);
         for (Map.Entry<String, Integer> entry : pool.entrySet()) {
+            if (!FISH_SHOP_CATALOGUE_IDS.contains(entry.getKey())) continue;
             FishDefinition candidate = registry.get(entry.getKey());
             int habitatWeight = Math.max(0, entry.getValue());
             if (candidate == null || habitatWeight == 0) continue;
