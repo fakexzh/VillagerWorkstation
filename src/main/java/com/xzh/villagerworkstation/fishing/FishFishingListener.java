@@ -125,42 +125,47 @@ public final class FishFishingListener implements Listener {
         ItemStack caughtStack = entity.getItemStack();
         Material caughtType = caughtStack.getType();
         FishDefinition definition;
+        boolean datapackFishItem = isDatapackFishItem(caughtStack);
+        String datapackFishId = datapackFishItem ? getDatapackFishId(caughtStack) : null;
+
+        // Datapack fish without a recognized physical-size suffix are not valid
+        // XZH specimens. Remove them before they can fall through as plain COD
+        // or SALMON and receive the vanilla shop price.
+        if (datapackFishItem && datapackFishId == null) {
+            entity.remove();
+            activeNetherHooks.remove(match.hookId);
+            return;
+        }
+
+        // Nether catches must belong to the Nether habitat pool. This also
+        // prevents sized Overworld-only fish models from leaking into the Nether.
+        if (datapackFishItem && !FishHabitatPools.NETHER_LAVA.containsKey(datapackFishId)) {
+            entity.remove();
+            activeNetherHooks.remove(match.hookId);
+            return;
+        }
 
         // Nether fishing deliberately excludes tropical fish. If the datapack's
         // vanilla loot produces one, normalize it to the Nether vanilla pool.
-        if (caughtType == Material.TROPICAL_FISH) {
+        if (!datapackFishItem && caughtType == Material.TROPICAL_FISH) {
             caughtStack = new ItemStack(chooseVanillaFish());
             entity.setItemStack(caughtStack);
             caughtType = caughtStack.getType();
         }
 
-        if (isVanillaFish(caughtType)) {
+        if (datapackFishItem || isVanillaFish(caughtType)) {
+            // A sized datapack fish is only a catch signal. The plugin creates
+            // the final PDC-backed specimen, which the Fish Shop prices correctly.
             definition = rollSpeciesByRarity(FishHabitatPools.NETHER_LAVA);
             if (definition == null) {
+                if (datapackFishItem) entity.setItemStack(new ItemStack(chooseVanillaFish()));
                 activeNetherHooks.remove(match.hookId);
-                return; // Keep the original vanilla catch.
+                return; // Preserve/normalize the vanilla catch on the 95% side.
             }
         } else {
-            // The datapack may append _small/_medium/_large/_giant to the
-            // custom model ID. getDatapackFishId strips that suffix before lookup.
-            String fishId = getDatapackFishId(caughtStack);
-            if (fishId == null) return;
-
-            FishDefinition datapackDefinition = registry.get(fishId);
-            if (datapackDefinition == null) {
-                plugin.getLogger().warning("Datapack spawned an unregistered XZH fish: " + fishId
-                        + "; preserving the original catch.");
-                return;
-            }
-            // Use the same per-species overall odds as Overworld fishing. The
-            // datapack's selected custom item is only the catch signal; the
-            // rarity roll decides whether and which Nether specimen is awarded.
-            definition = rollSpeciesByRarity(FishHabitatPools.NETHER_LAVA);
-            if (definition == null) {
-                entity.setItemStack(new ItemStack(chooseVanillaFish()));
-                activeNetherHooks.remove(match.hookId);
-                return;
-            }
+            // Do not let unrelated item entities from the datapack become catches.
+            activeNetherHooks.remove(match.hookId);
+            return;
         }
 
         if (definition == null) {
@@ -241,6 +246,13 @@ public final class FishFishingListener implements Listener {
         return nearestByPlayer != null ? nearestByPlayer : nearestByHook;
     }
 
+    private boolean isDatapackFishItem(ItemStack stack) {
+        if (stack == null || !stack.hasItemMeta()) return false;
+        NamespacedKey model = stack.getItemMeta().getItemModel();
+        return model != null && model.getNamespace().equals("barely_default")
+                && model.getKey().startsWith("fish_");
+    }
+
     private String getDatapackFishId(ItemStack stack) {
         ItemMeta meta = stack.getItemMeta();
         NamespacedKey model = meta == null ? null : meta.getItemModel();
@@ -250,16 +262,17 @@ public final class FishFishingListener implements Listener {
         if (!modelName.startsWith("fish_")) return null;
 
         String fishId = modelName.substring("fish_".length());
-        // Datapack and plugin-generated specimen models may append a physical
-        // size suffix. Strip it before validating the two Nether species.
+        // Only the four physical-size variants are valid Fish Shop specimens.
+        boolean hasSize = false;
         for (String size : new String[]{"_small", "_medium", "_large", "_giant"}) {
             if (fishId.endsWith(size)) {
                 fishId = fishId.substring(0, fishId.length() - size.length());
+                hasSize = true;
                 break;
             }
         }
-        return fishId.equals("netherwrasse") || fishId.equals("volcanic_bass")
-                ? fishId : null;
+        if (!hasSize || registry.get(fishId) == null) return null;
+        return FishHabitatPools.NETHER_LAVA.containsKey(fishId) ? fishId : null;
     }
 
     private boolean hasSpecimenMetadata(ItemStack stack) {
