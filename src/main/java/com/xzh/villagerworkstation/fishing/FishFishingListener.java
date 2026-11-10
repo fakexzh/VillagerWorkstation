@@ -28,8 +28,8 @@ import java.util.concurrent.ThreadLocalRandom;
 /** Adds XZH specimens without replacing vanilla water- or lava-fishing behavior. */
 public final class FishFishingListener implements Listener {
     private static final double NETHER_CATCH_RADIUS_SQUARED = 64.0;
-    /** Fixed share of eligible fish catches reserved for XZH custom specimens. */
-    private static final double CUSTOM_FISH_CHANCE_PERCENT = 5.0;
+    /** Used when custom-fishing.chance-percent is absent or invalid. */
+    private static final double DEFAULT_CUSTOM_FISH_CHANCE_PERCENT = 20.0;
     /** Keep a cast eligible briefly after Paper invalidates/retracts its hook. */
     private static final long RETRACTED_HOOK_GRACE_TICKS = 100L;
 
@@ -84,17 +84,33 @@ public final class FishFishingListener implements Listener {
         if (event.getState() != PlayerFishEvent.State.CAUGHT_FISH
                 || !(event.getCaught() instanceof Item caughtEntity)) return;
 
-        Material caughtType = caughtEntity.getItemStack().getType();
-        if (!isVanillaFish(caughtType)) return;
-
-        // The Overworld conversion path remains unchanged. Nether lava catches are
-        // handled by ItemSpawnEvent because the datapack creates those item entities.
         if (player.getWorld().getEnvironment() == World.Environment.NETHER) return;
+
+        ItemStack caughtStack = caughtEntity.getItemStack();
+        Material caughtType = caughtStack.getType();
+        boolean datapackFish = isDatapackFishItem(caughtStack);
+        if (!datapackFish && !isVanillaFish(caughtType)) return;
 
         Map<String, Integer> pool = FishHabitatPools.forBiome(
                 event.getHook().getLocation().getBlock().getBiome());
+
+        // A datapack fish is only eligible when it is a registered species with
+        // an explicit physical-size variant and belongs to this biome's pool.
+        // Never leave a raw datapack item in the inventory: the Fish Shop only
+        // recognizes the plugin-generated, PDC-backed specimen format.
+        if (datapackFish) {
+            String fishId = getDatapackFishId(caughtStack);
+            if (fishId == null || !pool.containsKey(fishId)) {
+                caughtEntity.remove();
+                return;
+            }
+        }
+
         FishDefinition definition = rollSpeciesByRarity(pool);
-        if (definition == null) return; // No XZH species rolled: preserve the vanilla catch.
+        if (definition == null) {
+            if (datapackFish) caughtEntity.setItemStack(new ItemStack(vanillaFallback(caughtType)));
+            return; // Preserve vanilla probability without leaking a raw datapack model.
+        }
         replaceWithSpecimen(player, caughtEntity, definition);
     }
 
@@ -124,48 +140,34 @@ public final class FishFishingListener implements Listener {
 
         ItemStack caughtStack = entity.getItemStack();
         Material caughtType = caughtStack.getType();
+        boolean datapackFish = isDatapackFishItem(caughtStack);
         FishDefinition definition;
+        Map<String, Integer> pool = FishHabitatPools.NETHER_LAVA;
 
-        // Nether fishing deliberately excludes tropical fish. If the datapack's
-        // vanilla loot produces one, normalize it to the Nether vanilla pool.
-        if (caughtType == Material.TROPICAL_FISH) {
-            caughtStack = new ItemStack(chooseVanillaFish());
-            entity.setItemStack(caughtStack);
-            caughtType = caughtStack.getType();
-        }
-
-        if (isVanillaFish(caughtType)) {
-            definition = rollSpeciesByRarity(FishHabitatPools.NETHER_LAVA);
-            if (definition == null) {
-                activeNetherHooks.remove(match.hookId);
-                return; // Keep the original vanilla catch.
-            }
-        } else {
-            // The datapack may append _small/_medium/_large/_giant to the
-            // custom model ID. getDatapackFishId strips that suffix before lookup.
+        // Reject every unsized, unknown, or non-Nether species model. This is
+        // applied before checking COD/SALMON because datapack models use those
+        // vanilla materials underneath their custom item models.
+        if (datapackFish) {
             String fishId = getDatapackFishId(caughtStack);
-            if (fishId == null) return;
-
-            FishDefinition datapackDefinition = registry.get(fishId);
-            if (datapackDefinition == null) {
-                plugin.getLogger().warning("Datapack spawned an unregistered XZH fish: " + fishId
-                        + "; preserving the original catch.");
-                return;
-            }
-            // Use the same per-species overall odds as Overworld fishing. The
-            // datapack's selected custom item is only the catch signal; the
-            // rarity roll decides whether and which Nether specimen is awarded.
-            definition = rollSpeciesByRarity(FishHabitatPools.NETHER_LAVA);
-            if (definition == null) {
-                entity.setItemStack(new ItemStack(chooseVanillaFish()));
+            if (fishId == null || !pool.containsKey(fishId)) {
+                entity.remove();
                 activeNetherHooks.remove(match.hookId);
                 return;
             }
-        }
-
-        if (definition == null) {
+        } else if (caughtType == Material.TROPICAL_FISH) {
+            // Nether fishing deliberately excludes tropical fish.
+            entity.setItemStack(new ItemStack(chooseVanillaFish()));
+            caughtType = entity.getItemStack().getType();
+        } else if (!isVanillaFish(caughtType)) {
             activeNetherHooks.remove(match.hookId);
             return;
+        }
+
+        definition = rollSpeciesByRarity(pool);
+        if (definition == null) {
+            if (datapackFish) entity.setItemStack(new ItemStack(chooseVanillaFish()));
+            activeNetherHooks.remove(match.hookId);
+            return; // Keep the vanilla side of the configured split.
         }
 
         activeNetherHooks.remove(match.hookId);
@@ -241,7 +243,19 @@ public final class FishFishingListener implements Listener {
         return nearestByPlayer != null ? nearestByPlayer : nearestByHook;
     }
 
+    private boolean isDatapackFishItem(ItemStack stack) {
+        if (stack == null || !stack.hasItemMeta()) return false;
+        NamespacedKey model = stack.getItemMeta().getItemModel();
+        return model != null && model.getNamespace().equals("barely_default")
+                && model.getKey().startsWith("fish_");
+    }
+
+    /**
+     * Returns a registered XZH species only for one of the four priced size
+     * variants. Unsized base models are deliberately not valid catches.
+     */
     private String getDatapackFishId(ItemStack stack) {
+        if (stack == null || !stack.hasItemMeta()) return null;
         ItemMeta meta = stack.getItemMeta();
         NamespacedKey model = meta == null ? null : meta.getItemModel();
         if (model == null || !model.getNamespace().equals("barely_default")) return null;
@@ -250,16 +264,19 @@ public final class FishFishingListener implements Listener {
         if (!modelName.startsWith("fish_")) return null;
 
         String fishId = modelName.substring("fish_".length());
-        // Datapack and plugin-generated specimen models may append a physical
-        // size suffix. Strip it before validating the two Nether species.
+        boolean hasSize = false;
         for (String size : new String[]{"_small", "_medium", "_large", "_giant"}) {
             if (fishId.endsWith(size)) {
                 fishId = fishId.substring(0, fishId.length() - size.length());
+                hasSize = true;
                 break;
             }
         }
-        return fishId.equals("netherwrasse") || fishId.equals("volcanic_bass")
-                ? fishId : null;
+        return hasSize && registry.get(fishId) != null ? fishId : null;
+    }
+
+    private Material vanillaFallback(Material caughtType) {
+        return isVanillaFish(caughtType) ? caughtType : Material.COD;
     }
 
     private boolean hasSpecimenMetadata(ItemStack stack) {
@@ -269,8 +286,8 @@ public final class FishFishingListener implements Listener {
     }
 
     /**
-     * First reserves exactly 5% of eligible fish catches for XZH specimens.
-     * The remaining 95% stays vanilla. Inside that fixed custom pool, species
+     * Reserves the configured percentage of eligible fish catches for XZH specimens.
+     * The remaining percentage stays vanilla. Inside the custom pool, species
      * are selected by habitat weight multiplied by rarity weight. No fishing
      * enchantment is read here, so Luck of the Sea cannot alter this split.
      */
@@ -278,7 +295,15 @@ public final class FishFishingListener implements Listener {
         if (pool == null || pool.isEmpty()) return null;
 
         // This independent gate is the complete vanilla/custom probability split.
-        if (ThreadLocalRandom.current().nextDouble(100.0) >= CUSTOM_FISH_CHANCE_PERCENT) {
+        // Clamp configuration so accidental values cannot disable vanilla fishing
+        // or create a probability greater than 100%.
+        double chancePercent = plugin.getConfig().getDouble(
+                "custom-fishing.chance-percent", DEFAULT_CUSTOM_FISH_CHANCE_PERCENT);
+        if (!Double.isFinite(chancePercent)) {
+            chancePercent = DEFAULT_CUSTOM_FISH_CHANCE_PERCENT;
+        }
+        chancePercent = Math.max(0.0, Math.min(100.0, chancePercent));
+        if (ThreadLocalRandom.current().nextDouble(100.0) >= chancePercent) {
             return null;
         }
 
@@ -304,7 +329,7 @@ public final class FishFishingListener implements Listener {
 
     private boolean isVanillaFish(Material material) {
         return material == Material.COD || material == Material.SALMON
-                || material == Material.PUFFERFISH;
+                || material == Material.PUFFERFISH || material == Material.TROPICAL_FISH;
     }
 
     /** Nether vanilla pool: cod, salmon and pufferfish only; tropical fish are excluded. */
