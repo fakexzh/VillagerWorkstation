@@ -28,8 +28,8 @@ import java.util.concurrent.ThreadLocalRandom;
 /** Adds XZH specimens without replacing vanilla water- or lava-fishing behavior. */
 public final class FishFishingListener implements Listener {
     private static final double NETHER_CATCH_RADIUS_SQUARED = 64.0;
-    /** Fixed share of eligible fish catches reserved for XZH custom specimens. */
-    private static final double CUSTOM_FISH_CHANCE_PERCENT = 5.0;
+    /** Used when custom-fishing.chance-percent is absent or invalid. */
+    private static final double DEFAULT_CUSTOM_FISH_CHANCE_PERCENT = 20.0;
     /** Keep a cast eligible briefly after Paper invalidates/retracts its hook. */
     private static final long RETRACTED_HOOK_GRACE_TICKS = 100L;
 
@@ -167,12 +167,7 @@ public final class FishFishingListener implements Listener {
         if (definition == null) {
             if (datapackFish) entity.setItemStack(new ItemStack(chooseVanillaFish()));
             activeNetherHooks.remove(match.hookId);
-            return; // Keep the vanilla side of the existing 95/5 split.
-        }
-
-        if (definition == null) {
-            activeNetherHooks.remove(match.hookId);
-            return;
+            return; // Keep the vanilla side of the configured split.
         }
 
         activeNetherHooks.remove(match.hookId);
@@ -291,8 +286,8 @@ public final class FishFishingListener implements Listener {
     }
 
     /**
-     * First reserves exactly 5% of eligible fish catches for XZH specimens.
-     * The remaining 95% stays vanilla. Inside that fixed custom pool, species
+     * Reserves the configured percentage of eligible fish catches for XZH specimens.
+     * The remaining percentage stays vanilla. Inside the custom pool, species
      * are selected by habitat weight multiplied by rarity weight. No fishing
      * enchantment is read here, so Luck of the Sea cannot alter this split.
      */
@@ -300,7 +295,15 @@ public final class FishFishingListener implements Listener {
         if (pool == null || pool.isEmpty()) return null;
 
         // This independent gate is the complete vanilla/custom probability split.
-        if (ThreadLocalRandom.current().nextDouble(100.0) >= CUSTOM_FISH_CHANCE_PERCENT) {
+        // Clamp configuration so accidental values cannot disable vanilla fishing
+        // or create a probability greater than 100%.
+        double chancePercent = plugin.getConfig().getDouble(
+                "custom-fishing.chance-percent", DEFAULT_CUSTOM_FISH_CHANCE_PERCENT);
+        if (!Double.isFinite(chancePercent)) {
+            chancePercent = DEFAULT_CUSTOM_FISH_CHANCE_PERCENT;
+        }
+        chancePercent = Math.max(0.0, Math.min(100.0, chancePercent));
+        if (ThreadLocalRandom.current().nextDouble(100.0) >= chancePercent) {
             return null;
         }
 
@@ -326,7 +329,7 @@ public final class FishFishingListener implements Listener {
 
     private boolean isVanillaFish(Material material) {
         return material == Material.COD || material == Material.SALMON
-                || material == Material.PUFFERFISH;
+                || material == Material.PUFFERFISH || material == Material.TROPICAL_FISH;
     }
 
     /** Nether vanilla pool: cod, salmon and pufferfish only; tropical fish are excluded. */
