@@ -6,7 +6,8 @@ public enum FishRarity {
 
     /**
      * Relative selection weight inside the fixed 5% custom-fish pool.
-     * This is not an absolute catch percentage.
+     * This is not an absolute catch percentage. Legendary is 20x rarer than
+     * the previous weight, and Mythical is 100x rarer than the previous weight.
      */
     public double catchWeight() {
         return switch (this) {
@@ -14,8 +15,8 @@ public enum FishRarity {
             case UNCOMMON -> 6.0;
             case RARE -> 3.0;
             case EPIC -> 2.0;
-            case LEGENDARY -> 1.0;
-            case MYTHICAL -> 0.5;
+            case LEGENDARY -> 0.05;
+            case MYTHICAL -> 0.005;
         };
     }
 
