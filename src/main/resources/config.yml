@@ -19,8 +19,9 @@ fisherman-max-fish-per-hour: 48
 
 # Fixed probability split for eligible fish catches: 95% vanilla fish / 5% XZH custom fish.
 # Luck of the Sea and other fishing enchantments do not modify this plugin-controlled split.
-# Inside the 5% custom pool, rarity values are relative weights (Common 10, Uncommon 6,
-# Rare 3, Epic 2, Legendary 1, Mythical 0.5), combined with each biome's habitat weights.
+# Inside the 5% custom pool, rarity values are relative weights combined with biome habitat weights:
+# Common 10, Uncommon 6, Rare 3, Epic 2, Legendary 0.05, Mythical 0.005.
+# Legendary is 20x rarer and Mythical is 100x rarer than their previous relative weights.
 # This applies to eligible Overworld water catches and Nether lava/datapack catches.
 # Junk and treasure are never replaced. Only genuine custom catches enter fish-collections.yml.
 custom-fishing:
