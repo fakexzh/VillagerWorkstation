@@ -26,7 +26,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
-/** Adds XZH specimens without replacing vanilla water- or lava-fishing behavior. */
+/** Adds XZH specimens to normal Overworld water fishing. */
 public final class FishFishingListener implements Listener {
     private static final double SPECIAL_ROD_CATCH_RADIUS_SQUARED = 64.0;
     /** Fixed share of eligible fish catches reserved for XZH custom specimens. */
