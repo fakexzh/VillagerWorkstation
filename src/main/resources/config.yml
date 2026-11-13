@@ -1,18 +1,10 @@
-# Custom production is limited to farmer and fisherman workstations only.
-# All other villager professions remain vanilla and are not modified by this plugin.
-scan-interval-ticks: 40
-# Horizontal work area: 64 blocks in each direction from the workstation.
-work-radius: 64
-# Keep the copper chest close to its workstation.
-chest-radius: 8
-
-# Farmers harvest mature wheat, carrots, potatoes and beetroot, replant them,
-# and store every harvest drop directly in the copper chest. Main crop items are
-# limited to 48 of each type per workstation per rolling real-world hour.
-farmer-enabled: true
-farmer-max-items-per-crop-per-hour: 48
-
-# Fishermen store a mixed catch of at most 48 fish per workstation per rolling real-world hour.
-# Catch odds: cod 60%, salmon 30%, tropical fish 6%, pufferfish 4%.
-fisherman-fishing-enabled: true
-fisherman-max-fish-per-hour: 48
+# Independent custom fishing and specimen collection settings.
+# Eligible water catches use a 5% custom-fish chance; vanilla catches remain available.
+# Fish catalogue data is loaded from fish.yml.
+# Custom specimens retain their unique identity, physical dimensions and collection data.
+custom-fishing:
+  enabled: true
+  fish-catalogue: fish.yml
+  consume-bait-on-success-only: true
+  specimen-identity: true
+  physical-size-data: true

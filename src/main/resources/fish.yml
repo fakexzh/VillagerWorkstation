@@ -1,0 +1,406 @@
+# XZH curated fish catalogue: 31 selected species with XZH rarity and biome assignments.
+# The plugin controls player fishing; the datapack supplies selected fish assets; special-rod species are caught in Overworld water.
+fish:
+  alpha_spiderfish:
+    display-name: "Alpha Spiderfish"
+    rarity: COMMON
+    model: "barely_default:fish_alpha_spiderfish"
+    weight: { minimum: 0.08, maximum: 22.80, typical: 5.95 }
+    dimensions:
+      length: { minimum: 10.0, maximum: 193.0 }
+      height: { minimum: 2.0, maximum: 62.0 }
+      width: { minimum: 1.0, maximum: 39.0 }
+    value: { base-price: 0.0 }
+    habitat:
+      biomes: [SWAMP, MANGROVE_SWAMP]
+      water-depth: { minimum: 0, maximum: 64 }
+  catfish:
+    display-name: "Catfish"
+    rarity: COMMON
+    model: "barely_default:fish_catfish"
+    weight: { minimum: 1.12, maximum: 180.10, typical: 42.05 }
+    dimensions:
+      length: { minimum: 78.0, maximum: 615.0 }
+      height: { minimum: 19.0, maximum: 197.0 }
+      width: { minimum: 9.0, maximum: 123.0 }
+    value: { base-price: 0.0 }
+    habitat:
+      biomes: [RIVER]
+      water-depth: { minimum: 0, maximum: 64 }
+  deadly_fin:
+    display-name: "Deadly Fin"
+    rarity: COMMON
+    model: "barely_default:fish_deadly_fin"
+    weight: { minimum: 0.22, maximum: 22.70, typical: 5.95 }
+    dimensions:
+      length: { minimum: 14.0, maximum: 194.0 }
+      height: { minimum: 3.0, maximum: 62.0 }
+      width: { minimum: 2.0, maximum: 39.0 }
+    value: { base-price: 0.0 }
+    habitat:
+      biomes: [OCEAN, DEEP_OCEAN, COLD_OCEAN, DEEP_COLD_OCEAN, FROZEN_OCEAN, DEEP_FROZEN_OCEAN]
+      water-depth: { minimum: 0, maximum: 64 }
+  flarefin_koi:
+    display-name: "Flarefin Koi"
+    rarity: COMMON
+    model: "barely_default:fish_flarefin_koi"
+    weight: { minimum: 0.10, maximum: 22.10, typical: 6.35 }
+    dimensions:
+      length: { minimum: 15.0, maximum: 148.0 }
+      height: { minimum: 4.0, maximum: 47.0 }
+      width: { minimum: 2.0, maximum: 30.0 }
+    value: { base-price: 0.0 }
+    habitat:
+      biomes: [WARM_OCEAN, LUKEWARM_OCEAN, DEEP_LUKEWARM_OCEAN]
+      water-depth: { minimum: 0, maximum: 64 }
+  king_of_the_pond:
+    display-name: "King Of The Pond"
+    rarity: COMMON
+    model: "barely_default:fish_king_of_the_pond"
+    weight: { minimum: 1.01, maximum: 182.20, typical: 42.88 }
+    dimensions:
+      length: { minimum: 70.0, maximum: 610.0 }
+      height: { minimum: 17.0, maximum: 195.0 }
+      width: { minimum: 8.0, maximum: 122.0 }
+    value: { base-price: 0.0 }
+    habitat:
+      biomes: [RIVER]
+      water-depth: { minimum: 0, maximum: 64 }
+  ocean_sunfish:
+    display-name: "Ocean Sunfish"
+    rarity: COMMON
+    model: "barely_default:fish_ocean_sunfish"
+    weight: { minimum: 1.08, maximum: 182.70, typical: 42.55 }
+    dimensions:
+      length: { minimum: 78.0, maximum: 644.0 }
+      height: { minimum: 19.0, maximum: 206.0 }
+      width: { minimum: 9.0, maximum: 129.0 }
+    value: { base-price: 0.0 }
+    habitat:
+      biomes: [WARM_OCEAN, LUKEWARM_OCEAN, DEEP_LUKEWARM_OCEAN]
+      water-depth: { minimum: 0, maximum: 64 }
+  rabbitfish:
+    display-name: "Rabbitfish"
+    rarity: COMMON
+    model: "barely_default:fish_rabbitfish"
+    weight: { minimum: 0.12, maximum: 24.70, typical: 6.25 }
+    dimensions:
+      length: { minimum: 17.0, maximum: 194.0 }
+      height: { minimum: 4.0, maximum: 62.0 }
+      width: { minimum: 2.0, maximum: 39.0 }
+    value: { base-price: 0.0 }
+    habitat:
+      biomes: [WARM_OCEAN, LUKEWARM_OCEAN, DEEP_LUKEWARM_OCEAN]
+      water-depth: { minimum: 0, maximum: 64 }
+  seven_finned_death:
+    display-name: "Seven Finned Death"
+    rarity: COMMON
+    model: "barely_default:fish_seven_finned_death"
+    weight: { minimum: 0.16, maximum: 22.30, typical: 5.85 }
+    dimensions:
+      length: { minimum: 10.0, maximum: 143.0 }
+      height: { minimum: 2.0, maximum: 46.0 }
+      width: { minimum: 1.0, maximum: 29.0 }
+    value: { base-price: 0.0 }
+    habitat:
+      biomes: [OCEAN, DEEP_OCEAN]
+      water-depth: { minimum: 0, maximum: 64 }
+  oarfish:
+    display-name: "Oarfish"
+    rarity: COMMON
+    model: "barely_default:fish_oarfish"
+    weight: { minimum: 1.06, maximum: 182.50, typical: 42.68 }
+    dimensions:
+      length: { minimum: 74.0, maximum: 636.0 }
+      height: { minimum: 18.0, maximum: 204.0 }
+      width: { minimum: 9.0, maximum: 127.0 }
+    value: { base-price: 0.0 }
+    habitat:
+      biomes: [OCEAN, DEEP_OCEAN, COLD_OCEAN, DEEP_COLD_OCEAN, FROZEN_OCEAN, DEEP_FROZEN_OCEAN]
+      water-depth: { minimum: 0, maximum: 64 }
+  wyverntail:
+    display-name: "Wyverntail"
+    rarity: COMMON
+    model: "barely_default:fish_wyverntail"
+    weight: { minimum: 0.10, maximum: 22.80, typical: 6.34 }
+    dimensions:
+      length: { minimum: 13.0, maximum: 169.0 }
+      height: { minimum: 3.0, maximum: 54.0 }
+      width: { minimum: 2.0, maximum: 34.0 }
+    value: { base-price: 0.0 }
+    habitat:
+      biomes: [WARM_OCEAN, LUKEWARM_OCEAN, DEEP_LUKEWARM_OCEAN]
+      water-depth: { minimum: 0, maximum: 64 }
+  princess_fish:
+    display-name: "Princess Fish"
+    rarity: COMMON
+    model: "barely_default:fish_princess_fish"
+    weight: { minimum: 0.22, maximum: 23.20, typical: 5.80 }
+    dimensions:
+      length: { minimum: 13.0, maximum: 146.0 }
+      height: { minimum: 3.0, maximum: 47.0 }
+      width: { minimum: 2.0, maximum: 29.0 }
+    value: { base-price: 0.0 }
+    habitat:
+      biomes: [RIVER]
+      water-depth: { minimum: 0, maximum: 64 }
+  red_snapper:
+    display-name: "Red Snapper"
+    rarity: UNCOMMON
+    model: "barely_default:fish_red_snapper"
+    weight: { minimum: 0.17, maximum: 23.10, typical: 5.55 }
+    dimensions:
+      length: { minimum: 12.0, maximum: 141.0 }
+      height: { minimum: 3.0, maximum: 45.0 }
+      width: { minimum: 1.0, maximum: 28.0 }
+    value: { base-price: 0.0 }
+    habitat:
+      biomes: [WARM_OCEAN, LUKEWARM_OCEAN, DEEP_LUKEWARM_OCEAN]
+      water-depth: { minimum: 0, maximum: 64 }
+  mystery_fish:
+    display-name: "Mystery Fish"
+    rarity: UNCOMMON
+    model: "barely_default:fish_mystery_fish"
+    weight: { minimum: 0.20, maximum: 23.00, typical: 5.83 }
+    dimensions:
+      length: { minimum: 16.0, maximum: 169.0 }
+      height: { minimum: 4.0, maximum: 54.0 }
+      width: { minimum: 2.0, maximum: 34.0 }
+    value: { base-price: 0.0 }
+    habitat:
+      biomes: [SWAMP, MANGROVE_SWAMP, OCEAN, DEEP_OCEAN]
+      water-depth: { minimum: 0, maximum: 64 }
+  arowana:
+    display-name: "Arowana"
+    rarity: UNCOMMON
+    model: "barely_default:fish_arowana"
+    weight: { minimum: 0.15, maximum: 23.00, typical: 6.15 }
+    dimensions:
+      length: { minimum: 13.0, maximum: 166.0 }
+      height: { minimum: 3.0, maximum: 53.0 }
+      width: { minimum: 2.0, maximum: 33.0 }
+    value: { base-price: 0.0 }
+    habitat:
+      biomes: [RIVER]
+      water-depth: { minimum: 0, maximum: 64 }
+  the_sounding:
+    display-name: "The Sounding"
+    rarity: UNCOMMON
+    model: "barely_default:fish_the_sounding"
+    weight: { minimum: 0.20, maximum: 24.00, typical: 5.76 }
+    dimensions:
+      length: { minimum: 18.0, maximum: 151.0 }
+      height: { minimum: 4.0, maximum: 48.0 }
+      width: { minimum: 2.0, maximum: 30.0 }
+    value: { base-price: 0.0 }
+    habitat:
+      biomes: [OCEAN, DEEP_OCEAN]
+      water-depth: { minimum: 0, maximum: 64 }
+  the_beastfish:
+    display-name: "The Beastfish"
+    rarity: UNCOMMON
+    model: "barely_default:fish_the_beastfish"
+    weight: { minimum: 0.18, maximum: 23.10, typical: 6.41 }
+    dimensions:
+      length: { minimum: 11.0, maximum: 199.0 }
+      height: { minimum: 3.0, maximum: 64.0 }
+      width: { minimum: 1.0, maximum: 40.0 }
+    value: { base-price: 0.0 }
+    habitat:
+      biomes: [OCEAN, DEEP_OCEAN]
+      water-depth: { minimum: 0, maximum: 64 }
+  tropical_barracuda:
+    display-name: "Tropical Barracuda"
+    rarity: UNCOMMON
+    model: "barely_default:fish_tropical_barracuda"
+    weight: { minimum: 0.10, maximum: 24.70, typical: 6.12 }
+    dimensions:
+      length: { minimum: 10.0, maximum: 176.0 }
+      height: { minimum: 2.0, maximum: 56.0 }
+      width: { minimum: 1.0, maximum: 35.0 }
+    value: { base-price: 0.0 }
+    habitat:
+      biomes: [WARM_OCEAN, LUKEWARM_OCEAN, DEEP_LUKEWARM_OCEAN]
+      water-depth: { minimum: 0, maximum: 64 }
+  saddled_bichir:
+    display-name: "Saddled Bichir"
+    rarity: UNCOMMON
+    model: "barely_default:fish_saddled_bichir"
+    weight: { minimum: 1.01, maximum: 181.80, typical: 42.01 }
+    dimensions:
+      length: { minimum: 77.0, maximum: 637.0 }
+      height: { minimum: 18.0, maximum: 204.0 }
+      width: { minimum: 9.0, maximum: 127.0 }
+    value: { base-price: 0.0 }
+    habitat:
+      biomes: [SWAMP, MANGROVE_SWAMP]
+      water-depth: { minimum: 0, maximum: 64 }
+  netherwrasse:
+    display-name: "Netherwrasse"
+    rarity: UNCOMMON
+    model: "barely_default:fish_netherwrasse"
+    weight: { minimum: 0.19, maximum: 22.10, typical: 6.07 }
+    dimensions:
+      length: { minimum: 13.0, maximum: 174.0 }
+      height: { minimum: 3.0, maximum: 56.0 }
+      width: { minimum: 2.0, maximum: 35.0 }
+    value: { base-price: 0.0 }
+    habitat:
+      biomes: [RIVER, OCEAN, WARM_OCEAN, COLD_OCEAN]
+      water-depth: { minimum: 0, maximum: 64 }
+  olive_flounder:
+    display-name: "Olive Flounder"
+    rarity: UNCOMMON
+    model: "barely_default:fish_olive_flounder"
+    weight: { minimum: 0.22, maximum: 24.80, typical: 6.35 }
+    dimensions:
+      length: { minimum: 10.0, maximum: 189.0 }
+      height: { minimum: 2.0, maximum: 60.0 }
+      width: { minimum: 1.0, maximum: 38.0 }
+    value: { base-price: 0.0 }
+    habitat:
+      biomes: [COLD_OCEAN, DEEP_COLD_OCEAN, FROZEN_OCEAN, DEEP_FROZEN_OCEAN]
+      water-depth: { minimum: 0, maximum: 64 }
+  sturgeon:
+    display-name: "Sturgeon"
+    rarity: UNCOMMON
+    model: "barely_default:fish_sturgeon"
+    weight: { minimum: 1.07, maximum: 182.90, typical: 42.18 }
+    dimensions:
+      length: { minimum: 72.0, maximum: 619.0 }
+      height: { minimum: 17.0, maximum: 198.0 }
+      width: { minimum: 9.0, maximum: 124.0 }
+    value: { base-price: 0.0 }
+    habitat:
+      biomes: [RIVER, COLD_OCEAN, DEEP_COLD_OCEAN, FROZEN_OCEAN, DEEP_FROZEN_OCEAN]
+      water-depth: { minimum: 0, maximum: 64 }
+  pain_eel:
+    display-name: "Pain Eel"
+    rarity: RARE
+    model: "barely_default:fish_pain_eel"
+    weight: { minimum: 0.08, maximum: 24.90, typical: 6.38 }
+    dimensions:
+      length: { minimum: 16.0, maximum: 151.0 }
+      height: { minimum: 4.0, maximum: 48.0 }
+      width: { minimum: 2.0, maximum: 30.0 }
+    value: { base-price: 0.0 }
+    habitat:
+      biomes: [OCEAN, DEEP_OCEAN, COLD_OCEAN, DEEP_COLD_OCEAN, FROZEN_OCEAN, DEEP_FROZEN_OCEAN]
+      water-depth: { minimum: 0, maximum: 64 }
+  dorado:
+    display-name: "Dorado"
+    rarity: RARE
+    model: "barely_default:fish_dorado"
+    weight: { minimum: 1.02, maximum: 180.60, typical: 42.20 }
+    dimensions:
+      length: { minimum: 78.0, maximum: 611.0 }
+      height: { minimum: 19.0, maximum: 196.0 }
+      width: { minimum: 9.0, maximum: 122.0 }
+    value: { base-price: 0.0 }
+    habitat:
+      biomes: [WARM_OCEAN, LUKEWARM_OCEAN, DEEP_LUKEWARM_OCEAN]
+      water-depth: { minimum: 0, maximum: 64 }
+  eel:
+    display-name: "Eel"
+    rarity: RARE
+    model: "barely_default:fish_eel"
+    weight: { minimum: 0.15, maximum: 24.20, typical: 5.52 }
+    dimensions:
+      length: { minimum: 11.0, maximum: 158.0 }
+      height: { minimum: 3.0, maximum: 51.0 }
+      width: { minimum: 1.0, maximum: 32.0 }
+    value: { base-price: 0.0 }
+    habitat:
+      biomes: [RIVER, SWAMP, MANGROVE_SWAMP]
+      water-depth: { minimum: 0, maximum: 64 }
+  touchy_fish:
+    display-name: "Touchy Fish"
+    rarity: RARE
+    model: "barely_default:fish_touchy_fish"
+    weight: { minimum: 0.21, maximum: 22.00, typical: 6.20 }
+    dimensions:
+      length: { minimum: 11.0, maximum: 177.0 }
+      height: { minimum: 3.0, maximum: 57.0 }
+      width: { minimum: 1.0, maximum: 35.0 }
+    value: { base-price: 0.0 }
+    habitat:
+      biomes: [OCEAN, DEEP_OCEAN]
+      water-depth: { minimum: 0, maximum: 64 }
+  moray_eel:
+    display-name: "Moray Eel"
+    rarity: RARE
+    model: "barely_default:fish_moray_eel"
+    weight: { minimum: 1.02, maximum: 182.40, typical: 42.17 }
+    dimensions:
+      length: { minimum: 75.0, maximum: 636.0 }
+      height: { minimum: 18.0, maximum: 204.0 }
+      width: { minimum: 9.0, maximum: 127.0 }
+    value: { base-price: 0.0 }
+    habitat:
+      biomes: [WARM_OCEAN, LUKEWARM_OCEAN, DEEP_LUKEWARM_OCEAN]
+      water-depth: { minimum: 0, maximum: 64 }
+  rusty_marlin:
+    display-name: "Rusty Marlin"
+    rarity: RARE
+    model: "barely_default:fish_rusty_marlin"
+    weight: { minimum: 1.14, maximum: 180.40, typical: 42.19 }
+    dimensions:
+      length: { minimum: 77.0, maximum: 651.0 }
+      height: { minimum: 18.0, maximum: 208.0 }
+      width: { minimum: 9.0, maximum: 130.0 }
+    value: { base-price: 0.0 }
+    habitat:
+      biomes: [OCEAN, DEEP_OCEAN]
+      water-depth: { minimum: 0, maximum: 64 }
+  football_fish:
+    display-name: "Football Fish"
+    rarity: LEGENDARY
+    model: "barely_default:fish_football_fish"
+    weight: { minimum: 0.20, maximum: 24.60, typical: 6.50 }
+    dimensions:
+      length: { minimum: 11.0, maximum: 155.0 }
+      height: { minimum: 3.0, maximum: 50.0 }
+      width: { minimum: 1.0, maximum: 31.0 }
+    value: { base-price: 0.0 }
+    habitat:
+      biomes: [OCEAN, DEEP_OCEAN]
+      water-depth: { minimum: 0, maximum: 64 }
+  unicorn_fish:
+    display-name: "Unicorn Fish"
+    rarity: LEGENDARY
+    model: "barely_default:fish_unicorn_fish"
+    weight: { minimum: 0.09, maximum: 23.30, typical: 5.57 }
+    dimensions:
+      length: { minimum: 14.0, maximum: 200.0 }
+      height: { minimum: 3.0, maximum: 64.0 }
+      width: { minimum: 2.0, maximum: 40.0 }
+    value: { base-price: 0.0 }
+    habitat:
+      biomes: [WARM_OCEAN, LUKEWARM_OCEAN, DEEP_LUKEWARM_OCEAN]
+      water-depth: { minimum: 0, maximum: 64 }
+  volcanic_bass:
+    display-name: "Volcanic Bass"
+    rarity: LEGENDARY
+    model: "barely_default:fish_volcanic_bass"
+    weight: { minimum: 0.23, maximum: 23.10, typical: 5.70 }
+    dimensions:
+      length: { minimum: 10.0, maximum: 146.0 }
+      height: { minimum: 2.0, maximum: 47.0 }
+      width: { minimum: 1.0, maximum: 29.0 }
+    value: { base-price: 0.0 }
+    habitat:
+      biomes: [RIVER, OCEAN, WARM_OCEAN, COLD_OCEAN]
+      water-depth: { minimum: 0, maximum: 64 }
+  laviathan_fry:
+    display-name: "Laviathan Fry"
+    rarity: MYTHICAL
+    model: "barely_default:fish_laviathan_fry"
+    weight: { minimum: 1.16, maximum: 180.10, typical: 42.16 }
+    dimensions:
+      length: { minimum: 73.0, maximum: 635.0 }
+      height: { minimum: 18.0, maximum: 203.0 }
+      width: { minimum: 9.0, maximum: 127.0 }
+    value: { base-price: 0.0 }
+    habitat:
+      biomes: [OCEAN, DEEP_OCEAN]
+      water-depth: { minimum: 0, maximum: 64 }
