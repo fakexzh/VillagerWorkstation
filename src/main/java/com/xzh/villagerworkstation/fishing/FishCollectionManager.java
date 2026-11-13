@@ -1,5 +1,6 @@
 package com.xzh.villagerworkstation.fishing;
 
+import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -11,10 +12,14 @@ import java.util.UUID;
 public final class FishCollectionManager {
     private final JavaPlugin plugin;
     private final File file;
+    private final YamlConfiguration data;
+    private boolean dirty;
 
     public FishCollectionManager(JavaPlugin plugin) {
         this.plugin = plugin;
         this.file = new File(plugin.getDataFolder(), "fish-collections.yml");
+        this.data = YamlConfiguration.loadConfiguration(file);
+        Bukkit.getScheduler().runTaskTimer(plugin, this::flush, 1200L, 1200L);
     }
 
     public synchronized void recordCatch(UUID playerId, FishDefinition fish, FishInstance specimen) {
@@ -23,7 +28,6 @@ public final class FishCollectionManager {
             return;
         }
 
-        YamlConfiguration data = YamlConfiguration.loadConfiguration(file);
         String player = "players." + playerId;
         String species = player + ".species." + fish.id();
         int previousCount = data.getInt(species + ".count", 0);
@@ -45,10 +49,24 @@ public final class FishCollectionManager {
             data.set(species + ".best-caught-at", specimen.caughtAtEpochMillis());
         }
 
+        dirty = true;
+    }
+
+    public synchronized void shutdown() {
+        flush();
+    }
+
+    private synchronized void flush() {
+        if (!dirty) return;
+        if (!plugin.getDataFolder().exists() && !plugin.getDataFolder().mkdirs()) {
+            plugin.getLogger().warning("Could not create fish collection data directory.");
+            return;
+        }
         try {
             data.save(file);
+            dirty = false;
         } catch (IOException exception) {
-            plugin.getLogger().severe("Could not save fish collection for " + playerId + ": " + exception.getMessage());
+            plugin.getLogger().severe("Could not save fish collections: " + exception.getMessage());
         }
     }
 }

@@ -55,7 +55,7 @@ public final class FishFishingListener implements Listener {
      */
     private final Map<UUID, HookTrack> activeSpecialRodHooks = new HashMap<>();
     private long serverTick;
-    private final BukkitTask hookTrackingTask;
+    private BukkitTask hookTrackingTask;
 
     public FishFishingListener(JavaPlugin plugin, FishRegistry registry, FishItemFactory itemFactory,
                                FishCollectionManager collectionManager) {
@@ -64,8 +64,6 @@ public final class FishFishingListener implements Listener {
         this.itemFactory = itemFactory;
         this.collectionManager = collectionManager;
         this.specimenIdKey = new NamespacedKey(plugin, "fish_uuid");
-        this.hookTrackingTask = plugin.getServer().getScheduler()
-                .runTaskTimer(plugin, this::refreshHookTracks, 1L, 1L);
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
@@ -88,6 +86,7 @@ public final class FishFishingListener implements Listener {
             activeSpecialRodHooks.put(hook.getUniqueId(), new HookTrack(
                     player.getUniqueId(), player.getWorld().getUID(), hook.getLocation().clone(),
                     serverTick, Long.MAX_VALUE));
+            ensureHookTrackingTask();
             return;
         }
 
@@ -194,7 +193,21 @@ public final class FishFishingListener implements Listener {
         activeSpecialRodHooks.entrySet().removeIf(entry -> entry.getValue().playerId.equals(playerId));
     }
 
+    private void ensureHookTrackingTask() {
+        if (hookTrackingTask == null || hookTrackingTask.isCancelled()) {
+            hookTrackingTask = plugin.getServer().getScheduler()
+                    .runTaskTimer(plugin, this::refreshHookTracks, 1L, 1L);
+        }
+    }
+
     private void refreshHookTracks() {
+        if (activeSpecialRodHooks.isEmpty()) {
+            if (hookTrackingTask != null) {
+                hookTrackingTask.cancel();
+                hookTrackingTask = null;
+            }
+            return;
+        }
         serverTick++;
         Iterator<Map.Entry<UUID, HookTrack>> iterator = activeSpecialRodHooks.entrySet().iterator();
         while (iterator.hasNext()) {

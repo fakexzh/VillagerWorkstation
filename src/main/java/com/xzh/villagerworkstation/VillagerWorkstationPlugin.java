@@ -43,6 +43,11 @@ public final class VillagerWorkstationPlugin extends JavaPlugin {
     }
 
     @Override
+    public void onDisable() {
+        if (fishCollectionManager != null) fishCollectionManager.shutdown();
+    }
+
+    @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (args.length == 0 || args[0].equalsIgnoreCase("help")) {
             sender.sendMessage(color("&6XZH Fishing &7- commands"));
