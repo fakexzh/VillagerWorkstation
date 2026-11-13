@@ -38,5 +38,5 @@ final class FishHabitatPools {
             Map.entry("mystery_fish", 10));
     static final Map<String, Integer> COLD_OCEAN = Map.of(
             "oarfish", 35, "sturgeon", 30, "olive_flounder", 20, "pain_eel", 10, "deadly_fin", 5);
-    static final Map<String, Integer> NETHER_LAVA = Map.of("netherwrasse", 85, "volcanic_bass", 15);
+    static final Map<String, Integer> SPECIAL_ROD_WATER = Map.of("netherwrasse", 85, "volcanic_bass", 15);
 }
