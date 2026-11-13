@@ -1,5 +1,5 @@
 # XZH curated fish catalogue: 31 selected species with XZH rarity and biome assignments.
-# The plugin controls player fishing; the datapack supplies selected fish assets and Nether lava fishing.
+# The plugin controls player fishing; the datapack supplies selected fish assets; special-rod species are caught in Overworld water.
 fish:
   alpha_spiderfish:
     display-name: "Alpha Spiderfish"
@@ -246,7 +246,7 @@ fish:
       width: { minimum: 2.0, maximum: 35.0 }
     value: { base-price: 0.0 }
     habitat:
-      biomes: [NETHER]
+      biomes: [RIVER, OCEAN, WARM_OCEAN, COLD_OCEAN]
       water-depth: { minimum: 0, maximum: 64 }
   olive_flounder:
     display-name: "Olive Flounder"
@@ -389,7 +389,7 @@ fish:
       width: { minimum: 1.0, maximum: 29.0 }
     value: { base-price: 0.0 }
     habitat:
-      biomes: [NETHER]
+      biomes: [RIVER, OCEAN, WARM_OCEAN, COLD_OCEAN]
       water-depth: { minimum: 0, maximum: 64 }
   laviathan_fry:
     display-name: "Laviathan Fry"
