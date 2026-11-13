@@ -28,7 +28,7 @@ import java.util.concurrent.ThreadLocalRandom;
 
 /** Adds XZH specimens without replacing vanilla water- or lava-fishing behavior. */
 public final class FishFishingListener implements Listener {
-    private static final double NETHER_CATCH_RADIUS_SQUARED = 64.0;
+    private static final double SPECIAL_ROD_CATCH_RADIUS_SQUARED = 64.0;
     /** Fixed share of eligible fish catches reserved for XZH custom specimens. */
     private static final double CUSTOM_FISH_CHANCE_PERCENT = 5.0;
     private static final Set<String> FISH_SHOP_CATALOGUE_IDS = Set.of(
@@ -53,7 +53,7 @@ public final class FishFishingListener implements Listener {
      * A cast is keyed by its actual hook UUID. Last location is refreshed while
      * the hook is valid, then retained for a short grace period after retraction.
      */
-    private final Map<UUID, HookTrack> activeNetherHooks = new HashMap<>();
+    private final Map<UUID, HookTrack> activeSpecialRodHooks = new HashMap<>();
     private long serverTick;
     private final BukkitTask hookTrackingTask;
 
@@ -72,18 +72,20 @@ public final class FishFishingListener implements Listener {
     public void onPlayerFish(PlayerFishEvent event) {
         Player player = event.getPlayer();
 
+        boolean specialRod = isNetheriteRod(player.getInventory().getItemInMainHand());
         if (event.getState() == PlayerFishEvent.State.FISHING
-                && player.getWorld().getEnvironment() == World.Environment.NETHER) {
-            if (!isNetheriteRod(player.getInventory().getItemInMainHand())) {
-                event.setCancelled(true);
-                event.getHook().remove();
-                activeNetherHooks.remove(event.getHook().getUniqueId());
-                player.sendMessage(ChatColor.RED + "Only the Netherite Fishing Rod works in the Nether.");
-                return;
-            }
+                && player.getWorld().getEnvironment() == World.Environment.NETHER && specialRod) {
+            event.setCancelled(true);
+            event.getHook().remove();
+            activeSpecialRodHooks.remove(event.getHook().getUniqueId());
+            player.sendMessage(ChatColor.RED + "Special fish can only be caught with the Netherite Fishing Rod in Overworld water.");
+            return;
+        }
 
+        if (event.getState() == PlayerFishEvent.State.FISHING
+                && player.getWorld().getEnvironment() == World.Environment.NORMAL && specialRod) {
             FishHook hook = event.getHook();
-            activeNetherHooks.put(hook.getUniqueId(), new HookTrack(
+            activeSpecialRodHooks.put(hook.getUniqueId(), new HookTrack(
                     player.getUniqueId(), player.getWorld().getUID(), hook.getLocation().clone(),
                     serverTick, Long.MAX_VALUE));
             return;
@@ -96,9 +98,9 @@ public final class FishFishingListener implements Listener {
         Material caughtType = caughtEntity.getItemStack().getType();
         if (!isVanillaFish(caughtType)) return;
 
-        // The Overworld conversion path remains unchanged. Nether lava catches are
-        // handled by ItemSpawnEvent because the datapack creates those item entities.
+        // Netherite-rod catches are handled by the tracked Overworld-water item-spawn path.
         if (player.getWorld().getEnvironment() == World.Environment.NETHER) return;
+        if (player.getWorld().getEnvironment() == World.Environment.NORMAL && specialRod) return;
 
         Map<String, Integer> pool = FishHabitatPools.forBiome(
                 event.getHook().getLocation().getBlock().getBiome());
@@ -108,26 +110,28 @@ public final class FishFishingListener implements Listener {
     }
 
     /**
-     * The datapack creates Nether-lava catches as item entities. Match the item
-     * against a recently tracked hook cast by a player using the required rod.
+     * Netherite-rod catches in normal Overworld water are item entities. Match
+     * the item against a recently tracked hook cast using the required rod.
      * The hook's last known position remains available briefly after retraction.
      */
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
-    public void onLavaFishSpawn(ItemSpawnEvent event) {
+    public void onOverworldSpecialRodFishSpawn(ItemSpawnEvent event) {
         Item entity = event.getEntity();
-        if (entity.getWorld().getEnvironment() != World.Environment.NETHER
+        if (entity.getWorld().getEnvironment() != World.Environment.NORMAL
                 || !plugin.getConfig().getBoolean("custom-fishing.enabled", true)) return;
         // A tagged specimen being dropped is not a new fishing catch.
         if (hasSpecimenMetadata(entity.getItemStack())) return;
 
-        // Only process actual catch items associated with a tracked Nether cast.
-        // This avoids changing custom fish players simply drop in the Nether.
-        HookMatch match = findNetherAngler(entity);
+        // Only process fish associated with a tracked Netherite-rod cast in Overworld water.
+        // This avoids changing custom fish players simply drop elsewhere.
+        HookMatch match = findSpecialRodAngler(entity);
         if (match == null) return;
+
+        if (match.track.lastLocation.getBlock().getType() != Material.WATER) return;
 
         Player owner = plugin.getServer().getPlayer(match.track.playerId);
         if (owner == null || !owner.isOnline()) {
-            activeNetherHooks.remove(match.hookId);
+            activeSpecialRodHooks.remove(match.hookId);
             return;
         }
 
@@ -135,8 +139,8 @@ public final class FishFishingListener implements Listener {
         Material caughtType = caughtStack.getType();
         FishDefinition definition;
 
-        // Nether fishing deliberately excludes tropical fish. If the datapack's
-        // vanilla loot produces one, normalize it to the Nether vanilla pool.
+        // Keep the special-rod pool's vanilla catch set consistent if a datapack
+        // supplies a tropical-fish item as its catch signal.
         if (caughtType == Material.TROPICAL_FISH) {
             caughtStack = new ItemStack(chooseVanillaFish());
             entity.setItemStack(caughtStack);
@@ -144,9 +148,9 @@ public final class FishFishingListener implements Listener {
         }
 
         if (isVanillaFish(caughtType)) {
-            definition = rollSpeciesByRarity(FishHabitatPools.NETHER_LAVA);
+            definition = rollSpeciesByRarity(FishHabitatPools.SPECIAL_ROD_WATER);
             if (definition == null) {
-                activeNetherHooks.remove(match.hookId);
+                activeSpecialRodHooks.remove(match.hookId);
                 return; // Keep the original vanilla catch.
             }
         } else {
@@ -163,21 +167,21 @@ public final class FishFishingListener implements Listener {
             }
             // Use the same per-species overall odds as Overworld fishing. The
             // datapack's selected custom item is only the catch signal; the
-            // rarity roll decides whether and which Nether specimen is awarded.
-            definition = rollSpeciesByRarity(FishHabitatPools.NETHER_LAVA);
+            // rarity roll decides whether and which special-rod specimen is awarded.
+            definition = rollSpeciesByRarity(FishHabitatPools.SPECIAL_ROD_WATER);
             if (definition == null) {
                 entity.setItemStack(new ItemStack(chooseVanillaFish()));
-                activeNetherHooks.remove(match.hookId);
+                activeSpecialRodHooks.remove(match.hookId);
                 return;
             }
         }
 
         if (definition == null) {
-            activeNetherHooks.remove(match.hookId);
+            activeSpecialRodHooks.remove(match.hookId);
             return;
         }
 
-        activeNetherHooks.remove(match.hookId);
+        activeSpecialRodHooks.remove(match.hookId);
         FishInstance specimen = generator.generate(definition);
         entity.setItemStack(itemFactory.create(definition, specimen));
         collectionManager.recordCatch(owner.getUniqueId(), definition, specimen);
@@ -187,12 +191,12 @@ public final class FishFishingListener implements Listener {
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
         UUID playerId = event.getPlayer().getUniqueId();
-        activeNetherHooks.entrySet().removeIf(entry -> entry.getValue().playerId.equals(playerId));
+        activeSpecialRodHooks.entrySet().removeIf(entry -> entry.getValue().playerId.equals(playerId));
     }
 
     private void refreshHookTracks() {
         serverTick++;
-        Iterator<Map.Entry<UUID, HookTrack>> iterator = activeNetherHooks.entrySet().iterator();
+        Iterator<Map.Entry<UUID, HookTrack>> iterator = activeSpecialRodHooks.entrySet().iterator();
         while (iterator.hasNext()) {
             Map.Entry<UUID, HookTrack> entry = iterator.next();
             HookTrack track = entry.getValue();
@@ -218,14 +222,14 @@ public final class FishFishingListener implements Listener {
         }
     }
 
-    private HookMatch findNetherAngler(Item item) {
+    private HookMatch findSpecialRodAngler(Item item) {
         HookMatch nearestByPlayer = null;
         double nearestPlayerDistance = 16.0; // Catch datapacks often spawn the item beside the angler.
         HookMatch nearestByHook = null;
-        double nearestHookDistance = NETHER_CATCH_RADIUS_SQUARED;
+        double nearestHookDistance = SPECIAL_ROD_CATCH_RADIUS_SQUARED;
         Location itemLocation = item.getLocation();
 
-        for (Map.Entry<UUID, HookTrack> entry : activeNetherHooks.entrySet()) {
+        for (Map.Entry<UUID, HookTrack> entry : activeSpecialRodHooks.entrySet()) {
             HookTrack track = entry.getValue();
             if (!track.worldId.equals(item.getWorld().getUID())) continue;
             if (serverTick > track.expiresAtTick) continue;
@@ -260,7 +264,7 @@ public final class FishFishingListener implements Listener {
 
         String fishId = modelName.substring("fish_".length());
         // Datapack and plugin-generated specimen models may append a physical
-        // size suffix. Strip it before validating the two Nether species.
+        // size suffix. Strip it before validating the special-rod species.
         for (String size : new String[]{"_small", "_medium", "_large", "_giant"}) {
             if (fishId.endsWith(size)) {
                 fishId = fishId.substring(0, fishId.length() - size.length());
@@ -318,7 +322,7 @@ public final class FishFishingListener implements Listener {
                 || material == Material.PUFFERFISH;
     }
 
-    /** Nether vanilla pool: cod, salmon and pufferfish only; tropical fish are excluded. */
+    /** special-rod vanilla pool: cod, salmon and pufferfish only; tropical fish are excluded. */
     private Material chooseVanillaFish() {
         int roll = ThreadLocalRandom.current().nextInt(100);
         if (roll < 60) return Material.COD;
